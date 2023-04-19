@@ -1,0 +1,23 @@
+HORIZON: 20
+INPUTS:
+  ODOMETRY:
+    TOPIC: "/autoverse/ground_truth_array"
+    FIELDS:
+      V_X: ""
+      V_Y: ""
+      V_THETA: ""
+  STEERING:
+    TOPIC: "/autoverse/vehicle_data"
+    FIELDS:
+      STEER_FB: ""
+      STEER_CMD: ""
+  THROTTLE:
+    TOPIC: "/autoverse/vehicle_data"
+    FIELDS:
+      THROTTLE_FB: ""
+      THROTTLE_CMD: ""
+  GEAR:
+    TOPIC: "/autoverse/powertrain_data"
+    FIELDS:
+      GEAR_FB: ""
+      GEAR_CMD: ""
