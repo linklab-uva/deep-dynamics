@@ -2,6 +2,7 @@ from torch import nn
 import torch
 from build_network import build_network, string_to_torch
 import yaml
+import pickle
 
 
 if torch.cuda.is_available():
@@ -78,9 +79,8 @@ class DeepDynamicsModel(nn.Module):
         valid_loss_min = torch.inf
         self.train()
         for i in range(self.epochs):
-            h = self.init_hidden()
+            h = self.init_hidden().float()
             for inputs, labels in train_data_loader:
-                h = tuple([e.data for e in h])
                 inputs, labels = inputs.to(device), labels.to(device)
                 self.zero_grad()
                 output, h = self.forward(inputs, h)
@@ -100,7 +100,7 @@ class DeepDynamicsModel(nn.Module):
             self.train()
             if torch.mean(val_losses) <= valid_loss_min:
                 torch.save(self.state_dict(), "temp.pth")
-                print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
+                print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,torch.mean(val_losses)))
                 valid_loss_min = torch.mean(val_losses)
             print("Epoch: {}/{}...".format(i+1, self.epochs),
                 "Loss: {:.6f}...".format(loss.item()),
@@ -108,7 +108,6 @@ class DeepDynamicsModel(nn.Module):
 
 if __name__ == "__main__":
     import sys
-    import pickle
     model = DeepDynamicsModel(sys.argv[1])
     with open(sys.argv[2], 'rb') as f:
         input = pickle.load(f)
