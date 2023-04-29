@@ -27,7 +27,7 @@ MODEL:
   HORIZON: 15
   LAYERS:
     - GRU:
-      OUT_FEATURES: 15
+      OUT_FEATURES: 225
       LAYERS: 1
     - DENSE:
       OUT_FEATURES: 32
