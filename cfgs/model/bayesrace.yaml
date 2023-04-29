@@ -1,0 +1,49 @@
+STATE:
+  - VX
+  - VY
+  - YAW_RATE
+  - STEERING_FB
+  - THROTTLE_FB
+ACTIONS:
+  - STEERING_CMD
+  - THROTTLE_CMD
+PARAMETERS:
+  - Bf
+  - Cf
+  - Df
+  - Br
+  - Cr
+  - Dr
+  - Cm1
+  - Cm2
+  - Cr0
+  - Cr2
+  - Izz
+  - Steer_delay
+  - Throttle_delay
+  - Max_steer_roc
+  - Max_throttle_roc
+MODEL:
+  HORIZON: 15
+  LAYERS:
+    - GRU:
+      OUT_FEATURES: 15
+      LAYERS: 1
+    - DENSE:
+      OUT_FEATURES: 32
+      ACTIVATION: ReLU
+    - DENSE:
+      OUT_FEATURES: 32
+      ACTIVATION: ReLU
+    - DENSE:
+      ACTIVATION:
+  OPTIMIZATION:
+    LOSS: MSE
+    BATCH_SIZE: 4
+    NUM_EPOCHS: 80
+    OPTIMIZER: NAdam
+    LR: 0.003
+    WEIGHT_DECAY: 0.01
+    MOMENTUM: 0.9
+    LR_DECAY: 0.1
+    LR_CLIP: 0.0000001
