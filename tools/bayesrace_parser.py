@@ -2,9 +2,7 @@
 
 import numpy as np
 import sys
-import pickle
 from tqdm import tqdm
-import os
 
 def writeData(input_file, horizon):
     data = np.load(input_file)
@@ -24,11 +22,8 @@ def writeData(input_file, horizon):
         labels[i] = np.array([*odometry[i+horizon+1], steering_fb[i+horizon+1], throttle_fb[i+horizon+1]])
     print("Final features shape:", features.shape)
     print("Final labels shape:", labels.shape)
-    with open(os.path.join("../data/bayesrace/", os.path.basename(os.path.normpath(input_file)) + "_features_" + str(horizon) + ".pkl"), 'wb') as f:
-        pickle.dump(features, f, protocol=pickle.HIGHEST_PROTOCOL)
-    with open(os.path.join("../data/bayesrace/", os.path.basename(os.path.normpath(input_file)) + "_labels_" + str(horizon) + ".pkl"), 'wb') as f:
-        pickle.dump(labels, f, protocol=pickle.HIGHEST_PROTOCOL)
-
+    np.savez(input_file[:input_file.find(".npz")] + "_" + str(horizon) + ".npz", features=features, labels=labels)
+    
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

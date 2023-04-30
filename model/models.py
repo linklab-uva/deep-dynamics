@@ -12,13 +12,10 @@ else:
     device = torch.device("cpu")
 
 class DeepDynamicsDataset(torch.utils.data.Dataset):
-    def __init__(self, X_file, y_file):
-        with open(X_file, 'rb') as f:
-            X = pickle.load(f)
-        self.X_data = torch.from_numpy(X).float().to(device)
-        with open(y_file, 'rb') as f:
-            Y = pickle.load(f)
-        self.y_data = torch.from_numpy(Y).float().to(device)
+    def __init__(self, dataset_file):
+        dataset = np.load(dataset_file)
+        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)
+        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)
     def __len__(self):
         return(self.X_data.shape[0])
     def __getitem__(self, idx):
@@ -45,9 +42,6 @@ class DeepDynamicsModel(nn.Module):
         else:
             self.is_rnn = False
         self.feed_forward = nn.ModuleList(layers)
-        self.gru = nn.GRU(7,15, batch_first=True)
-        self.flatten = nn.Flatten()
-        self.linear = nn.Linear(225, 3)
         self.loss_function = string_to_torch[params["MODEL"]["OPTIMIZATION"]["LOSS"]]()
         self.optimizer = string_to_torch[params["MODEL"]["OPTIMIZATION"]["OPTIMIZER"]](self.parameters(), lr=params["MODEL"]["OPTIMIZATION"]["LR"])
         self.epochs = params["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
