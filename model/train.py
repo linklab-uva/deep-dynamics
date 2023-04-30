@@ -1,13 +1,14 @@
 from models import DeepDynamicsModel, DeepDynamicsDataset
 import torch
 import numpy as np
+import os
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
 
-def train(model, train_data_loader, val_data_loader):
+def train(model, train_data_loader, val_data_loader, experiment_name):
         valid_loss_min = torch.inf
         model.train()
         model.cuda()
@@ -32,7 +33,7 @@ def train(model, train_data_loader, val_data_loader):
                 val_losses.append(val_loss.item())
             model.train()
             if np.mean(val_losses) <= valid_loss_min:
-                torch.save(model.state_dict(), "temp.pth")
+                torch.save(model.state_dict(), "../output/%s/epoch_%s.pth" % (experiment_name, i+1))
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
                 valid_loss_min = np.mean(val_losses)
             print("Epoch: {}/{}...".format(i+1, model.epochs),
@@ -41,18 +42,25 @@ def train(model, train_data_loader, val_data_loader):
 
 if __name__ == "__main__":
     import argparse, argcomplete
-    parser = argparse.ArgumentParser(description="Label point clouds with bounding boxes.")
+    parser = argparse.ArgumentParser(description="Train a deep dynamics model.")
     parser.add_argument("model_cfg", type=str, help="Config file for model")
     parser.add_argument("dataset", type=str, help="Dataset file")
+    parser.add_argument("experiment_name", type=str, help="Name for experiment")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)
+    if not os.path.exists("../output/"):
+         os.mkdir("../output/")
+    if os.path.exists("../output/%s" % (argdict["experiment_name"])):
+         print("Experiment already exists. Choose a different name")
+         exit(0)
+    os.mkdir("../output/%s" % (argdict["experiment_name"]))
     model = DeepDynamicsModel(argdict["model_cfg"])
     dataset = DeepDynamicsDataset(argdict["dataset"])
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=True)
-    train(model, train_data_loader, val_data_loader)
+    train(model, train_data_loader, val_data_loader, argdict["experiment_name"])
         
 
     
