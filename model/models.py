@@ -32,23 +32,23 @@ class DeepDynamicsModel(nn.Module):
         super().__init__()
         layers = build_network(param_file)
         with open(param_file, 'rb') as f:
-            params = yaml.load(f, Loader=yaml.SafeLoader)
-        self.batch_size = params["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"]
-        if params["MODEL"]["LAYERS"][0].get("LAYERS"):
+            self.param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+        self.batch_size = self.param_dict["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"]
+        if self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS"):
             self.is_rnn = True
-            self.rnn_n_layers = params["MODEL"]["LAYERS"][0].get("LAYERS")
-            self.rnn_hiden_dim = params["MODEL"]["HORIZON"]
+            self.rnn_n_layers = self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS")
+            self.rnn_hiden_dim = self.param_dict["MODEL"]["HORIZON"]
             layers.insert(1, nn.Flatten())
         else:
             self.is_rnn = False
         self.feed_forward = nn.ModuleList(layers)
-        self.loss_function = string_to_torch[params["MODEL"]["OPTIMIZATION"]["LOSS"]]()
-        self.optimizer = string_to_torch[params["MODEL"]["OPTIMIZATION"]["OPTIMIZER"]](self.parameters(), lr=params["MODEL"]["OPTIMIZATION"]["LR"])
-        self.epochs = params["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
-        self.state = list(params["STATE"])
-        self.actions = list(params["ACTIONS"])
-        self.sys_params = list(params["PARAMETERS"])
-        self.vehicle_specs = params["VEHICLE_SPECS"]
+        self.loss_function = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["LOSS"]]()
+        self.optimizer = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["OPTIMIZER"]](self.parameters(), lr=self.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
+        self.epochs = self.param_dict["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
+        self.state = list(self.param_dict["STATE"])
+        self.actions = list(self.param_dict["ACTIONS"])
+        self.sys_params = list(self.param_dict["PARAMETERS"])
+        self.vehicle_specs = self.param_dict["VEHICLE_SPECS"]
 
 
     def forward(self, x, h0):

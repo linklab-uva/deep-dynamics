@@ -1,3 +1,5 @@
+from comet_ml import Experiment
+from comet_ml.integration.pytorch import log_model
 from models import DeepDynamicsModel, DeepDynamicsDataset
 import torch
 import numpy as np
@@ -9,6 +11,18 @@ else:
     device = torch.device("cpu")
 
 def train(model, train_data_loader, val_data_loader, experiment_name):
+        experiment = Experiment(
+            api_key = "xaMmqHU4KZj6mbGh99EmEUBKp",
+            project_name = "deep-dynamics",
+            workspace="deep-dynamics",
+            )
+        experiment.set_name(experiment_name)
+        experiment.add_tag("lr=%f" & model.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
+        if model.is_rnn:
+             experiment.add_tag("RNN")
+        else:
+            experiment.add_tag("FFNN")
+        experiment.log_parameters(model.param_dict)
         valid_loss_min = torch.inf
         model.train()
         model.cuda()
@@ -31,14 +45,17 @@ def train(model, train_data_loader, val_data_loader, experiment_name):
                 out, val_h = model(inp, val_h)
                 val_loss = model.loss_function(out.squeeze(), lab.float())
                 val_losses.append(val_loss.item())
-            model.train()
+                experiment.log_metric("val_loss", val_loss)
+            experiment.log_epoch_end(i+1)
             if np.mean(val_losses) <= valid_loss_min:
                 torch.save(model.state_dict(), "../output/%s/epoch_%s.pth" % (experiment_name, i+1))
+                log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
                 valid_loss_min = np.mean(val_losses)
             print("Epoch: {}/{}...".format(i+1, model.epochs),
                 "Loss: {:.6f}...".format(loss.item()),
                 "Val Loss: {:.6f}".format(np.mean(val_losses)))
+            model.train()
 
 if __name__ == "__main__":
     import argparse, argcomplete
