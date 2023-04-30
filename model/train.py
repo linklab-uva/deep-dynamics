@@ -17,7 +17,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name):
             workspace="deep-dynamics",
             )
         experiment.set_name(experiment_name)
-        experiment.add_tag("lr=%f" & model.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
+        experiment.add_tag("lr=%f" % model.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
         if model.is_rnn:
              experiment.add_tag("RNN")
         else:

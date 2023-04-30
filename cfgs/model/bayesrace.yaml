@@ -2,8 +2,8 @@ STATE:
   - VX
   - VY
   - YAW_RATE
-  - STEERING_FB
-  - THROTTLE_FB
+  # - STEERING_FB
+  # - THROTTLE_FB
 ACTIONS:
   - STEERING_CMD
   - THROTTLE_CMD
@@ -21,8 +21,8 @@ PARAMETERS:
   - Izz
   # - Steer_delay
   # - Throttle_delay
-  - Max_steer_roc
-  - Max_throttle_roc
+  # - Max_steer_roc
+  # - Max_throttle_roc
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
@@ -44,6 +44,6 @@ MODEL:
   OPTIMIZATION:
     LOSS: MSE
     BATCH_SIZE: 4
-    NUM_EPOCHS: 80
-    OPTIMIZER: NAdam
-    LR: 0.0005
+    NUM_EPOCHS: 200
+    OPTIMIZER: Adam
+    LR: 0.0002
