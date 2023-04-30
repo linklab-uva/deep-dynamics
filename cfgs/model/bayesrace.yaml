@@ -19,10 +19,14 @@ PARAMETERS:
   - Cr0
   - Cr2
   - Izz
-  - Steer_delay
-  - Throttle_delay
+  # - Steer_delay
+  # - Throttle_delay
   - Max_steer_roc
   - Max_throttle_roc
+VEHICLE_SPECS:
+  lf: 0.029
+  lr: 0.033
+  mass: 0.041
 MODEL:
   HORIZON: 15
   LAYERS:
@@ -42,4 +46,4 @@ MODEL:
     BATCH_SIZE: 4
     NUM_EPOCHS: 80
     OPTIMIZER: NAdam
-    LR: 0.003
+    LR: 0.0005

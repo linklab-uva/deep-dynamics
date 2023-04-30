@@ -30,11 +30,11 @@ def build_network(param_file):
     layers = []
     for i in range(len(param_dict["MODEL"]["LAYERS"])):
         if i == 0:
-            input_size = (num_states + num_actions) * horizon
+            input_size = (num_states + num_actions + 1) * horizon  # Add 1 for timestamp
         else:
             input_size = param_dict["MODEL"]["LAYERS"][i-1]["OUT_FEATURES"]
         if i == len(param_dict["MODEL"]["LAYERS"]) - 1:
-            output_size = 3#num_parameters
+            output_size = num_parameters
         else:
             output_size = param_dict["MODEL"]["LAYERS"][i]["OUT_FEATURES"]
         module = create_module(list(param_dict["MODEL"]["LAYERS"][i].keys())[0], input_size, horizon, output_size, param_dict["MODEL"]["LAYERS"][i].get("LAYERS"), param_dict["MODEL"]["LAYERS"][i].get("ACTIVATION"))
