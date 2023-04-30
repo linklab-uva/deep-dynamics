@@ -51,7 +51,7 @@ if __name__ == "__main__":
     model = DeepDynamicsModel(argdict["model_cfg"])
     dataset = DeepDynamicsDataset(argdict["features_file"], argdict["labels_file"])
     train_dataset, val_dataset = dataset.split(0.85)
-    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, )
+    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=True)
     train(model, train_data_loader, val_data_loader)
         
