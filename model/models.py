@@ -78,14 +78,3 @@ class DeepDynamicsModel(nn.Module):
         weight = next(self.parameters()).data
         hidden = weight.new(self.rnn_n_layers, batch_size, self.rnn_hiden_dim).zero_().to(device)
         return hidden
-
-
-if __name__ == "__main__":
-    import sys
-    model = DeepDynamicsModel(sys.argv[1])
-    with open(sys.argv[2], 'rb') as f:
-        input = pickle.load(f)
-    if model.is_rnn:
-        h0 = model.init_hidden()
-        model(torch.from_numpy(input[0:4]).float(), h0.float())
-

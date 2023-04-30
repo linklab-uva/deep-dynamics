@@ -49,13 +49,3 @@ def create_module(name, input_size, horizon, output_size, layers=None, activatio
     else:
         module = [string_to_torch[name](input_size, output_size)]
     return module
-
-
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Expected: ./build_network.py [param_file] [horizon]")
-    else:
-        build_network(sys.argv[1], sys.argv[2])
-    
