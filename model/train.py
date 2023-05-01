@@ -33,7 +33,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet)
                 inputs, labels = inputs.to(device), labels.to(device)
                 h = h.data
                 model.zero_grad()
-                output, h = model(inputs, h)
+                output, h, _ = model(inputs, h)
                 loss = model.loss_function(output.squeeze(), labels.float())
                 loss.backward()
                 model.optimizer.step()
@@ -43,7 +43,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet)
                 val_h = model.init_hidden(inp.shape[0])
                 inp, lab = inp.to(device), lab.to(device)
                 val_h = val_h.data
-                out, val_h = model(inp, val_h)
+                out, val_h, _ = model(inp, val_h)
                 val_loss = model.loss_function(out.squeeze(), lab.float())
                 val_losses.append(val_loss.item())
                 if log_comet:

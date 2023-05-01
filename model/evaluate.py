@@ -7,6 +7,14 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
+def pretty(d, indent=0):
+   for key, value in d.items():
+      print('\t' * indent + str(key))
+      if isinstance(value, dict):
+         pretty(value, indent+1)
+      else:
+         print('\t' * (indent+1) + str(value))
+
 def evaluate_predictions(model, test_data_loader, eval_coeffs):
         test_losses = []
         predictions = []
@@ -14,16 +22,30 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
 
         model.eval()
         model.to(device)
+        if eval_coeffs:
+             sys_params = []
         for inputs, labels in test_data_loader:
             h = model.init_hidden(inputs.shape[0])
             h = h.data
             inputs, labels = inputs.to(device), labels.to(device)
-            output, h = model(inputs, h)
+            output, h, sysid = model(inputs, h)
             test_loss = model.loss_function(output.squeeze(), labels.float())
             test_losses.append(test_loss.item())
             predictions.append(output.squeeze())
             ground_truth.append(labels.cpu())
+            if eval_coeffs:
+                 sys_params.append(sysid.cpu().detach().numpy())
         print("Loss: {:.3f}".format(np.mean(test_losses)))
+        if eval_coeffs:
+            means = model.unpack_sys_params(np.mean(sys_params, axis=0))
+            std_dev = model.unpack_sys_params(np.std(sys_params, axis=0))
+            print("Mean Coefficient Values")
+            print("------------------------------------")
+            pretty(means)
+            print("Std Dev Coefficient Values")
+            print("------------------------------------")
+            pretty(std_dev)
+            print("------------------------------------")
         return predictions, ground_truth
 
 if __name__ == "__main__":
@@ -39,5 +61,5 @@ if __name__ == "__main__":
     model = DeepDynamicsModel(argdict["model_cfg"])
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
-    test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=model.batch_size, shuffle=False)
+    test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
     evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])

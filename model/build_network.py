@@ -11,6 +11,8 @@ string_to_torch = {
     "LSTM" : torch.nn.LSTM,
     # Activations
     "ReLU": torch.nn.ReLU,
+    "Mish": torch.nn.Mish,
+    "Softplus": torch.nn.Softplus,
     # Loss Functions
     "MSE" : torch.nn.MSELoss,
     "MAE" : torch.nn.SmoothL1Loss,
