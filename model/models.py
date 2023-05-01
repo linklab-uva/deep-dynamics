@@ -93,7 +93,7 @@ class DeepDynamicsModel(nn.Module):
         for i in range(len(self.actions)):
             state_action_dict[self.actions[i]] = x[:,-1, global_index]
             global_index += 1
-        state_action_dict["delta_t"] = x[:,-1, global_index]
+        state_action_dict["delta_t"] = x[:,-1, global_index] - x[:, -2, global_index]
         return state_action_dict
 
     def init_hidden(self, batch_size):

@@ -7,7 +7,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-def evaluate_predictions(model, test_data_loader):
+def evaluate_predictions(model, test_data_loader, eval_coeffs):
         test_losses = []
         predictions = []
         ground_truth = []
@@ -39,5 +39,5 @@ if __name__ == "__main__":
     model = DeepDynamicsModel(argdict["model_cfg"])
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
-    test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=model.batch_size, shuffle=True)
-    evaluate_predictions(model, test_data_loader, argdict["eval_type"])
+    test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=model.batch_size, shuffle=False)
+    evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
