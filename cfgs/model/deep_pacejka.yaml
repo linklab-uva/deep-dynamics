@@ -14,16 +14,14 @@ PARAMETERS:
   - Br
   - Cr
   - Dr
-  - Cm1
-  - Cm2
-  - Cr0
-  - Cr2
-  - Izz
+  - Frx
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
+  Izz: 27.8e-6
 MODEL:
+  NAME: DeepPacejka
   HORIZON: 2
   LAYERS:
     # - GRU:

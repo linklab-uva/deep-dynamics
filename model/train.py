@@ -1,9 +1,11 @@
 from comet_ml import Experiment
 from comet_ml.integration.pytorch import log_model
 from models import DeepDynamicsModel, DeepDynamicsDataset
+from models import string_to_model
 import torch
 import numpy as np
 import os
+import yaml
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -86,7 +88,9 @@ if __name__ == "__main__":
          print("Experiment already exists. Choose a different name")
          exit(0)
     os.mkdir("../output/%s" % (argdict["experiment_name"]))
-    model = DeepDynamicsModel(argdict["model_cfg"])
+    with open(argdict["model_cfg"], 'rb') as f:
+        param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+    model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     dataset = DeepDynamicsDataset(argdict["dataset"])
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, drop_last=True)

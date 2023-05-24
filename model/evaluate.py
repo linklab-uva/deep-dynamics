@@ -1,5 +1,6 @@
-from models import DeepDynamicsModel, DeepDynamicsDataset
+from models import DeepDynamicsDataset, string_to_model
 import torch
+import yaml
 import numpy as np
 
 if torch.cuda.is_available():
@@ -63,7 +64,9 @@ if __name__ == "__main__":
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)
-    model = DeepDynamicsModel(argdict["model_cfg"])
+    with open(argdict["model_cfg"], 'rb') as f:
+        param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+    model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)

@@ -23,9 +23,7 @@ string_to_torch = {
 }
 
 
-def build_network(param_file):
-    with open(param_file, 'r') as f:
-        param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+def build_network(param_dict):
     horizon = param_dict["MODEL"]["HORIZON"]
     num_states = len(param_dict["STATE"])
     num_actions = len(param_dict["ACTIONS"])
