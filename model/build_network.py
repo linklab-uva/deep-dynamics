@@ -18,7 +18,8 @@ string_to_torch = {
     "MAE" : torch.nn.SmoothL1Loss,
     # Optimizers
     "Adam" : torch.optim.Adam,
-    "NAdam" : torch.optim.NAdam
+    "NAdam" : torch.optim.NAdam,
+    "AdamW" : torch.optim.AdamW
 }
 
 
@@ -32,7 +33,7 @@ def build_network(param_file):
     layers = []
     for i in range(len(param_dict["MODEL"]["LAYERS"])):
         if i == 0:
-            input_size = (num_states + num_actions + 1) * horizon  # Add 1 for timestamp
+            input_size = (num_states + num_actions) * horizon
         else:
             input_size = param_dict["MODEL"]["LAYERS"][i-1]["OUT_FEATURES"]
         if i == len(param_dict["MODEL"]["LAYERS"]) - 1:
@@ -41,6 +42,7 @@ def build_network(param_file):
             output_size = param_dict["MODEL"]["LAYERS"][i]["OUT_FEATURES"]
         module = create_module(list(param_dict["MODEL"]["LAYERS"][i].keys())[0], input_size, horizon, output_size, param_dict["MODEL"]["LAYERS"][i].get("LAYERS"), param_dict["MODEL"]["LAYERS"][i].get("ACTIVATION"))
         layers += module
+    print(layers)
     return layers
 
 def create_module(name, input_size, horizon, output_size, layers=None, activation=None):

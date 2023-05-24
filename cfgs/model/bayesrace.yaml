@@ -2,11 +2,11 @@ STATE:
   - VX
   - VY
   - YAW_RATE
-  # - STEERING_FB
-  # - THROTTLE_FB
+  - THROTTLE_FB
+  - STEERING_FB
 ACTIONS:
-  - STEERING_CMD
   - THROTTLE_CMD
+  - STEERING_CMD
 PARAMETERS:
   - Bf
   - Cf
@@ -19,20 +19,16 @@ PARAMETERS:
   - Cr0
   - Cr2
   - Izz
-  # - Steer_delay
-  # - Throttle_delay
-  # - Max_steer_roc
-  # - Max_throttle_roc
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
 MODEL:
-  HORIZON: 5
+  HORIZON: 2
   LAYERS:
-    - GRU:
-      OUT_FEATURES: 25
-      LAYERS: 1
+    # - GRU:
+    #   OUT_FEATURES: 4
+    #   LAYERS: 1
     - DENSE:
       OUT_FEATURES: 32
       ACTIVATION: Mish
@@ -44,6 +40,6 @@ MODEL:
   OPTIMIZATION:
     LOSS: MSE
     BATCH_SIZE: 4
-    NUM_EPOCHS: 200
+    NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0002
+    LR: 0.001

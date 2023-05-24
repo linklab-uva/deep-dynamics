@@ -28,22 +28,31 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet)
         model.train()
         model.cuda()
         for i in range(model.epochs):
-            h = model.init_hidden(model.batch_size)
+            if model.is_rnn:
+                h = model.init_hidden(model.batch_size)
             for inputs, labels in train_data_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
-                h = h.data
+                if model.is_rnn:
+                    h = h.data
                 model.zero_grad()
-                output, h, _ = model(inputs, h)
+                if model.is_rnn:
+                    output, h, _ = model(inputs, h)
+                else:
+                    output, _, _ = model(inputs)
                 loss = model.loss_function(output.squeeze(), labels.float())
                 loss.backward()
                 model.optimizer.step()
             val_losses = []
             model.eval()
             for inp, lab in val_data_loader:
-                val_h = model.init_hidden(inp.shape[0])
+                if model.is_rnn:
+                    val_h = model.init_hidden(inp.shape[0])
                 inp, lab = inp.to(device), lab.to(device)
-                val_h = val_h.data
-                out, val_h, _ = model(inp, val_h)
+                if model.is_rnn:
+                    val_h = val_h.data
+                    out, val_h, _ = model(inp, val_h)
+                else:
+                    out, _, _ = model(inp)
                 val_loss = model.loss_function(out.squeeze(), lab.float())
                 val_losses.append(val_loss.item())
                 if log_comet:
@@ -67,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("model_cfg", type=str, help="Config file for model")
     parser.add_argument("dataset", type=str, help="Dataset file")
     parser.add_argument("experiment_name", type=str, help="Name for experiment")
-    parser.add_argument("--log_comet", type=bool, default=False, help="Log experiment in comet.ml")
+    parser.add_argument("--log_comet", action='store_true', default=False, help="Log experiment in comet.ml")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)

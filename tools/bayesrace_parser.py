@@ -9,16 +9,14 @@ def writeData(input_file, horizon):
     states = data["states"]
     inputs = data["inputs"]
     time = data["time"]
-    odometry = states[3:,:].T # vx, vy, yaw_rate
-    throttle_fb = inputs[0,:]
-    # throttle_cmd = np.append([0], inputs[0,:]).T
-    steering_fb = inputs[1,:]
-    # steering_cmd = (inputs[1,:] - np.append([0], inputs[1,:-1])).T
-    features = np.zeros((len(odometry) - horizon - 1,  horizon, 6))
-    labels = np.zeros((len(odometry) - horizon - 1, 3))
-    for i in tqdm(range(len(throttle_fb) - horizon), desc="Compiling dataset"):
-        features[i] = np.array([*odometry[i:i+horizon].T, steering_fb[i:i+horizon], throttle_fb[i:i+horizon], time[i:i+horizon] - time[i]]).T
-        labels[i] = np.array([*odometry[i+horizon]])#, steering_fb[i+horizon+1], throttle_fb[i+horizon+1]])
+    odometry = states[3:,:].T # vx, vy, yaw_rate, throttle_fb, steering_fb
+    throttle_cmd = inputs[0,:]
+    steering_cmd = inputs[1,:]
+    features = np.zeros((len(odometry) - horizon - 1,  horizon, 8))
+    labels = np.zeros((len(odometry) - horizon - 1, 5))
+    for i in tqdm(range(len(throttle_cmd) - horizon), desc="Compiling dataset"):
+        features[i] = np.array([*odometry[i:i+horizon].T, throttle_cmd[i:i+horizon], steering_cmd[i:i+horizon], time[i:i+horizon] - time[i]]).T
+        labels[i] = np.array([*odometry[i+horizon]])
     print("Final features shape:", features.shape)
     print("Final labels shape:", labels.shape)
     np.savez(input_file[:input_file.find(".npz")] + "_" + str(horizon) + ".npz", features=features, labels=labels)
