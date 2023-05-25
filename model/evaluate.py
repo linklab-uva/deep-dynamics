@@ -16,6 +16,15 @@ def pretty(d, indent=0):
       else:
          print('\t' * (indent+1) + str(value))
 
+def compute_percent_error(predicted, target):
+    percent_errors = dict()
+    for key in predicted.keys():
+        if target.get(key):
+            percent_errors[key] = np.abs(predicted[key] - target[key]) / target[key] * 100
+    return percent_errors
+
+        
+
 def evaluate_predictions(model, test_data_loader, eval_coeffs):
         test_losses = []
         predictions = []
@@ -43,14 +52,18 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
                  sys_params.append(sysid.cpu().detach().numpy())
         print("Loss: {:.6f}".format(np.mean(test_losses)))
         if eval_coeffs:
-            means = model.unpack_sys_params(np.mean(sys_params, axis=0))
-            std_dev = model.unpack_sys_params(np.std(sys_params, axis=0))
+            means, _ = model.unpack_sys_params(np.mean(sys_params, axis=0))
+            std_dev, _ = model.unpack_sys_params(np.std(sys_params, axis=0))
+            percent_errors = compute_percent_error(*model.unpack_sys_params(np.mean(sys_params, axis=0)))
             print("Mean Coefficient Values")
             print("------------------------------------")
             pretty(means)
             print("Std Dev Coefficient Values")
             print("------------------------------------")
             pretty(std_dev)
+            print("Percent Error")
+            print("------------------------------------")
+            pretty(percent_errors)
             print("------------------------------------")
         return predictions, ground_truth
 

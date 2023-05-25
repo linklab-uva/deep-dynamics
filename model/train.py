@@ -1,6 +1,6 @@
 from comet_ml import Experiment
 from comet_ml.integration.pytorch import log_model
-from models import DeepDynamicsModel, DeepDynamicsDataset
+from models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel
 from models import string_to_model
 import torch
 import numpy as np
@@ -12,12 +12,19 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-def train(model, train_data_loader, val_data_loader, experiment_name, log_comet):
+def train(model, train_data_loader, val_data_loader, experiment_name, log_comet, output_dir):
         if log_comet:
-            experiment = Experiment(
+            if type(model) is DeepDynamicsModel:
+                experiment = Experiment(
+                    api_key = "xaMmqHU4KZj6mbGh99EmEUBKp",
+                    project_name = "deep-dynamics",
+                    workspace="deep-dynamics",
+                    )
+            elif type(model) is DeepPacejkaModel:
+                experiment = Experiment(
                 api_key = "xaMmqHU4KZj6mbGh99EmEUBKp",
-                project_name = "deep-dynamics",
-                workspace="deep-dynamics",
+                project_name = "deep-pacejka",
+                workspace="deep-dynamics"
                 )
             experiment.set_name(experiment_name)
             experiment.add_tag("lr=%f" % model.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
@@ -62,7 +69,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet)
             if log_comet:
                 experiment.log_epoch_end(i+1)
             if np.mean(val_losses) <= valid_loss_min:
-                torch.save(model.state_dict(), "../output/%s/epoch_%s.pth" % (experiment_name, i+1))
+                torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
                 if log_comet:
                     log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
@@ -82,20 +89,24 @@ if __name__ == "__main__":
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)
-    if not os.path.exists("../output/"):
-         os.mkdir("../output/")
-    if os.path.exists("../output/%s" % (argdict["experiment_name"])):
-         print("Experiment already exists. Choose a different name")
-         exit(0)
-    os.mkdir("../output/%s" % (argdict["experiment_name"]))
     with open(argdict["model_cfg"], 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     dataset = DeepDynamicsDataset(argdict["dataset"])
+    if not os.path.exists("../output"):
+        os.mkdir("../output")
+    if not os.path.exists("../output/%s" % (os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0])):
+        os.mkdir("../output/%s" % (os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0]))
+    output_dir = "../output/%s/%s" % (os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0], argdict["experiment_name"])
+    if not os.path.exists(output_dir):
+         os.mkdir(output_dir)
+    else:
+         print("Experiment already exists. Choose a different name")
+         exit(0)
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=True)
-    train(model, train_data_loader, val_data_loader, argdict["experiment_name"], argdict["log_comet"])
+    train(model, train_data_loader, val_data_loader, argdict["experiment_name"], argdict["log_comet"], output_dir)
         
 
     

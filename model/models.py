@@ -46,7 +46,7 @@ class DeepDynamicsModel(nn.Module):
         self.epochs = self.param_dict["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
         self.state = list(self.param_dict["STATE"])
         self.actions = list(self.param_dict["ACTIONS"])
-        self.sys_params = list(self.param_dict["PARAMETERS"])
+        self.sys_params = list([*(list(p.keys())[0] for p in self.param_dict["PARAMETERS"])])
         self.vehicle_specs = self.param_dict["VEHICLE_SPECS"]
 
 
@@ -67,7 +67,7 @@ class DeepDynamicsModel(nn.Module):
         
 
     def differential_equation(self, x, output):
-        sys_param_dict = self.unpack_sys_params(output)
+        sys_param_dict, _ = self.unpack_sys_params(output)
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
         throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
@@ -87,18 +87,7 @@ class DeepDynamicsModel(nn.Module):
 
 
     def test_sys_params(self, x):
-        sys_param_dict = dict()
-        sys_param_dict["Izz"] = 27.8e-6
-        sys_param_dict["Bf"] = 2.579
-        sys_param_dict["Cf"] = 1.2
-        sys_param_dict["Df"] = 0.192
-        sys_param_dict["Br"] = 3.3852
-        sys_param_dict["Cr"] = 1.2691
-        sys_param_dict["Dr"] = 0.1737
-        sys_param_dict["Cm1"] = 0.287
-        sys_param_dict["Cm2"] = 0.0545
-        sys_param_dict["Cr0"] = 0.0518
-        sys_param_dict["Cr2"] = 0.00035
+        _, sys_param_dict = self.unpack_sys_params(torch.zeros((1, len(self.sys_params))))
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
         throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
@@ -121,7 +110,10 @@ class DeepDynamicsModel(nn.Module):
         sys_params_dict = dict()
         for i in range(len(self.sys_params)):
             sys_params_dict[self.sys_params[i]] = o[:,i]
-        return sys_params_dict 
+        ground_truth_dict =  dict()
+        for p in self.param_dict["PARAMETERS"]:
+            ground_truth_dict.update(p)
+        return sys_params_dict, ground_truth_dict
 
     def unpack_state_actions(self, x):
         state_action_dict = dict()
@@ -162,7 +154,7 @@ class DeepPacejkaModel(nn.Module):
         self.epochs = self.param_dict["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
         self.state = list(self.param_dict["STATE"])
         self.actions = list(self.param_dict["ACTIONS"])
-        self.sys_params = list(self.param_dict["PARAMETERS"])
+        self.sys_params = list([*(list(p.keys())[0] for p in self.param_dict["PARAMETERS"])])
         self.vehicle_specs = self.param_dict["VEHICLE_SPECS"]
 
 
@@ -183,7 +175,7 @@ class DeepPacejkaModel(nn.Module):
         
 
     def differential_equation(self, x, output):
-        sys_param_dict = self.unpack_sys_params(output)
+        sys_param_dict, _ = self.unpack_sys_params(output)
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
         throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
@@ -205,7 +197,10 @@ class DeepPacejkaModel(nn.Module):
         sys_params_dict = dict()
         for i in range(len(self.sys_params)):
             sys_params_dict[self.sys_params[i]] = o[:,i]
-        return sys_params_dict 
+        ground_truth_dict =  dict()
+        for p in self.param_dict["PARAMETERS"]:
+            ground_truth_dict.update(p)
+        return sys_params_dict, ground_truth_dict
 
     def unpack_state_actions(self, x):
         state_action_dict = dict()
