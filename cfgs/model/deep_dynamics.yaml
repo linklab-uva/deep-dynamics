@@ -27,9 +27,9 @@ MODEL:
   NAME: DeepDynamics
   HORIZON: 2
   LAYERS:
-    # - GRU:
-    #   OUT_FEATURES: 4
-    #   LAYERS: 1
+    - GRU:
+      OUT_FEATURES: 4
+      LAYERS: 1
     - DENSE:
       OUT_FEATURES: 32
       ACTIVATION: Mish
