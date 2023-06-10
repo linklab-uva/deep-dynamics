@@ -48,7 +48,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                     output, h, _ = model(inputs, h)
                 else:
                     output, _, _ = model(inputs)
-                loss = model.loss_function(output.squeeze(), labels.float())
+                loss = model.loss_function(output.squeeze(), labels.squeeze().float())
                 loss.backward()
                 model.optimizer.step()
             val_losses = []
@@ -62,7 +62,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                     out, val_h, _ = model(inp, val_h)
                 else:
                     out, _, _ = model(inp)
-                val_loss = model.loss_function(out.squeeze(), lab.float())
+                val_loss = model.loss_function(out.squeeze(), lab.squeeze().float())
                 val_losses.append(val_loss.item())
                 if log_comet:
                     experiment.log_metric("val_loss", val_loss)
@@ -78,6 +78,8 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                 "Loss: {:.6f}...".format(loss.item()),
                 "Val Loss: {:.6f}".format(np.mean(val_losses)))
             model.train()
+        if log_comet:
+            experiment.end()
 
 if __name__ == "__main__":
     import argparse, argcomplete
