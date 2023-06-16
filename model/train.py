@@ -70,8 +70,8 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                 experiment.log_epoch_end(i+1)
             if np.mean(val_losses) <= valid_loss_min:
                 torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
-                if log_comet:
-                    log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
+                #if log_comet:
+                #    log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
                 valid_loss_min = np.mean(val_losses)
             print("Epoch: {}/{}...".format(i+1, model.epochs),

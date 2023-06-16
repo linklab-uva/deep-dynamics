@@ -43,7 +43,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
                 output, h, sysid = model(inputs, h)
             else:
                 output, _, sysid = model(inputs)
-            # output = model.test_sys_params(inputs)
+            #output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.float())
             test_losses.append(test_loss.cpu().detach().numpy())
             predictions.append(output.squeeze())
@@ -65,7 +65,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
             print("------------------------------------")
             pretty(percent_errors)
             print("------------------------------------")
-        return predictions, ground_truth
+        return np.mean(test_losses, axis=0)
 
 if __name__ == "__main__":
     import argparse, argcomplete
@@ -83,4 +83,5 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
-    evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
+    losses = evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
+    print(losses)
