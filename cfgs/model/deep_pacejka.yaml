@@ -24,22 +24,37 @@ MODEL:
   NAME: DeepPacejka
   HORIZON: 2
   LAYERS:
-    - GRU:
-      OUT_FEATURES: 4
-      LAYERS: 1
+      # - GRU:
+      #   OUT_FEATURES: 4
+      #   LAYERS: 1
     - DENSE:
-      OUT_FEATURES: 32
+      OUT_FEATURES: 128
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 32
+      OUT_FEATURES: 128 
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 16
+      OUT_FEATURES: 128
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 128
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 128
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 128
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 128
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 128
       ACTIVATION: Mish
     - DENSE:
       ACTIVATION: Softplus
   OPTIMIZATION:
-    LOSS: MAE
+    LOSS: MSE
     BATCH_SIZE: 4
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
