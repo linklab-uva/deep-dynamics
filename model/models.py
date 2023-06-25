@@ -53,7 +53,7 @@ class ModelBase(nn.Module):
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, h0=None):
+    def forward(self, x, h0=None, Ts=0.02):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
@@ -65,10 +65,10 @@ class ModelBase(nn.Module):
                     ff, h0 = self.feed_forward[0](ff, h0)
                 else:
                     ff = self.feed_forward[i](ff)
-        o = self.differential_equation(x, ff)
+        o = self.differential_equation(x, ff, Ts)
         return o, h0, ff
     
-    def test_sys_params(self, x):
+    def test_sys_params(self, x, Ts=0.02):
         _, sys_param_dict = self.unpack_sys_params(torch.zeros((1, len(self.sys_params))))
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
@@ -78,14 +78,12 @@ class ModelBase(nn.Module):
         Frx = (sys_param_dict["Cm1"]-sys_param_dict["Cm2"]*state_action_dict["VX"])*throttle - sys_param_dict["Cr0"] - sys_param_dict["Cr2"]*(state_action_dict["VX"]**2)
         Ffy = sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf))
         Fry = sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar))
-        dxdt = torch.zeros(len(x), len(self.state)).to(device)
+        dxdt = torch.zeros(len(x), 3).to(device)
         dxdt[:,0] = 1/self.vehicle_specs["mass"] * (Frx - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Izz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
-        dxdt[:,3] = state_action_dict["THROTTLE_CMD"]
-        dxdt[:,4] = state_action_dict["STEERING_CMD"]
-        dxdt[:,:3] *= state_action_dict["delta_t"][:, None]
-        return x[:,-1,:len(self.state)] + dxdt
+        dxdt *= Ts
+        return x[:,-1,:3] + dxdt
 
 
     def unpack_sys_params(self, o):
@@ -106,7 +104,6 @@ class ModelBase(nn.Module):
         for i in range(len(self.actions)):
             state_action_dict[self.actions[i]] = x[:,-1, global_index]
             global_index += 1
-        state_action_dict["delta_t"] = x[:,-1, global_index] - x[:, -2, global_index]
         return state_action_dict
 
     def init_hidden(self, batch_size):
@@ -119,7 +116,7 @@ class DeepDynamicsModel(ModelBase):
     def __init__(self, param_dict):
         super().__init__(param_dict)
 
-    def differential_equation(self, x, output):
+    def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
@@ -129,21 +126,19 @@ class DeepDynamicsModel(ModelBase):
         Frx = (sys_param_dict["Cm1"]-sys_param_dict["Cm2"]*state_action_dict["VX"])*throttle - sys_param_dict["Cr0"] - sys_param_dict["Cr2"]*(state_action_dict["VX"]**2)
         Ffy = sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf))
         Fry = sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar))
-        dxdt = torch.zeros(len(x), len(self.state)).to(device)
+        dxdt = torch.zeros(len(x), 3).to(device)
         dxdt[:,0] = 1/self.vehicle_specs["mass"] * (Frx - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Izz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
-        dxdt[:,3] = state_action_dict["THROTTLE_CMD"]
-        dxdt[:,4] = state_action_dict["STEERING_CMD"]
-        dxdt[:,:3] *= state_action_dict["delta_t"][:, None]
-        return x[:,-1,:len(self.state)] + dxdt
+        dxdt *= Ts
+        return x[:,-1,:3] + dxdt
 
 
 class DeepPacejkaModel(ModelBase):
     def __init__(self, param_dict):
         super().__init__(param_dict)
 
-    def differential_equation(self, x, output):
+    def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
@@ -152,14 +147,12 @@ class DeepPacejkaModel(ModelBase):
         alphar = torch.atan2((self.vehicle_specs["lr"]*state_action_dict["YAW_RATE"] - state_action_dict["VY"]), torch.abs(state_action_dict["VX"]))
         Ffy = sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf))
         Fry = sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar))
-        dxdt = torch.zeros(len(x), len(self.state)).to(device)
+        dxdt = torch.zeros(len(x), l3).to(device)
         dxdt[:,0] = 1/self.vehicle_specs["mass"] * (sys_param_dict["Frx"] - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/self.vehicle_specs["Izz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
-        dxdt[:,3] = state_action_dict["THROTTLE_CMD"]
-        dxdt[:,4] = state_action_dict["STEERING_CMD"]
-        dxdt[:,:3] *= state_action_dict["delta_t"][:, None]
-        return x[:,-1,:len(self.state)] + dxdt
+        dxdt *= Ts
+        return x[:,-1,:3] + dxdt
 
 
 string_to_model = {
