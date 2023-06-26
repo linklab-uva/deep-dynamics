@@ -40,7 +40,6 @@ def build_network(param_dict):
             output_size = param_dict["MODEL"]["LAYERS"][i]["OUT_FEATURES"]
         module = create_module(list(param_dict["MODEL"]["LAYERS"][i].keys())[0], input_size, horizon, output_size, param_dict["MODEL"]["LAYERS"][i].get("LAYERS"), param_dict["MODEL"]["LAYERS"][i].get("ACTIVATION"))
         layers += module
-    print(layers)
     return layers
 
 def create_module(name, input_size, horizon, output_size, layers=None, activation=None):
