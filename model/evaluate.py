@@ -65,7 +65,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
             print("------------------------------------")
             pretty(percent_errors)
             print("------------------------------------")
-        return predictions, ground_truth
+        return np.mean(test_losses, axis=0)
 
 if __name__ == "__main__":
     import argparse, argcomplete
@@ -79,8 +79,9 @@ if __name__ == "__main__":
     argdict : dict = vars(args)
     with open(argdict["model_cfg"], 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
-    model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
+    model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
-    evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
+    losses = evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
+    print(losses)

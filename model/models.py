@@ -28,7 +28,7 @@ class DeepDynamicsDataset(torch.utils.data.Dataset):
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
 
 class ModelBase(nn.Module):
-    def __init__(self, param_dict):
+    def __init__(self, param_dict, eval=False):
         super().__init__()
         self.param_dict = param_dict
         layers = build_network(self.param_dict)
@@ -41,7 +41,10 @@ class ModelBase(nn.Module):
         else:
             self.is_rnn = False
         self.feed_forward = nn.ModuleList(layers)
-        self.loss_function = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["LOSS"]]()
+        if eval:
+            self.loss_function = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["LOSS"]](reduction='none')
+        else:
+            self.loss_function = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["LOSS"]]()
         self.optimizer = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["OPTIMIZER"]](self.parameters(), lr=self.param_dict["MODEL"]["OPTIMIZATION"]["LR"])
         self.epochs = self.param_dict["MODEL"]["OPTIMIZATION"]["NUM_EPOCHS"]
         self.state = list(self.param_dict["STATE"])
@@ -113,8 +116,8 @@ class ModelBase(nn.Module):
 
     
 class DeepDynamicsModel(ModelBase):
-    def __init__(self, param_dict):
-        super().__init__(param_dict)
+    def __init__(self, param_dict, eval=False):
+        super().__init__(param_dict, eval)
 
     def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
@@ -135,8 +138,8 @@ class DeepDynamicsModel(ModelBase):
 
 
 class DeepPacejkaModel(ModelBase):
-    def __init__(self, param_dict):
-        super().__init__(param_dict)
+    def __init__(self, param_dict, eval=False):
+        super().__init__(param_dict, eval)
 
     def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
@@ -147,7 +150,7 @@ class DeepPacejkaModel(ModelBase):
         alphar = torch.atan2((self.vehicle_specs["lr"]*state_action_dict["YAW_RATE"] - state_action_dict["VY"]), torch.abs(state_action_dict["VX"]))
         Ffy = sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf))
         Fry = sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar))
-        dxdt = torch.zeros(len(x), l3).to(device)
+        dxdt = torch.zeros(len(x), 3).to(device)
         dxdt[:,0] = 1/self.vehicle_specs["mass"] * (sys_param_dict["Frx"] - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/self.vehicle_specs["Izz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])

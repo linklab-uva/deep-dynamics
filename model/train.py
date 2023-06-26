@@ -37,6 +37,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
         model.train()
         model.cuda()
         for i in range(model.epochs):
+            train_losses = []
             if model.is_rnn:
                 h = model.init_hidden(model.batch_size)
             for inputs, labels in train_data_loader:
@@ -49,6 +50,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                 else:
                     output, _, _ = model(inputs)
                 loss = model.loss_function(output.squeeze(), labels.squeeze().float())
+                train_losses.append(loss.item())
                 loss.backward()
                 model.optimizer.step()
             val_losses = []
@@ -70,12 +72,12 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_comet,
                 experiment.log_epoch_end(i+1)
             if np.mean(val_losses) <= valid_loss_min:
                 torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
-                if log_comet:
-                    log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
+                #if log_comet:
+                #    log_model(experiment, model, model_name="epoch_%s.pth" % (i+1))
                 print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,np.mean(val_losses)))
                 valid_loss_min = np.mean(val_losses)
             print("Epoch: {}/{}...".format(i+1, model.epochs),
-                "Loss: {:.6f}...".format(loss.item()),
+                "Loss: {:.6f}...".format(np.mean(train_losses)),
                 "Val Loss: {:.6f}".format(np.mean(val_losses)))
             model.train()
         if log_comet:
