@@ -5,13 +5,14 @@ import csv
 import numpy as np
 
 hyperparams = {
-    "layers" : [2, 3, 4],
-    "neurons" : [32, 64, 128],
-    "batch_size": [4, 8, 16],
-    "lr" : [0.0001, 0.0002, 0.0004, 0.0008]
+    "layers" : [4, 6, 8],
+    "neurons" : [64, 128, 256],
+    "batch_size": [4],
+    "lr" : [0.0002],
+    "horizon": [1, 2, 4, 8]
 }
 
-test_csv = "csvs/deep_dynamics.csv"
+test_csv = "csvs/deep_pacejka_horizon.csv"
 # Gather data
 testing_data = []
 with open(test_csv) as f:
@@ -21,87 +22,76 @@ with open(test_csv) as f:
         testing_data.append(np.mean(data))
 # Sort data by hyperparemter
 layers_neurons = dict()
-layers_batch = dict()
-layers_lr = dict()
-neurons_batch = dict()
-neurons_lr = dict()
-batch_lr = dict()
+layers_horizon = dict()
+neurons_horizon = dict()
 count = 0
 for layers in hyperparams["layers"]:
     for neurons in hyperparams["neurons"]:
         for batch_size in hyperparams["batch_size"]:
             for lr in hyperparams["lr"]:
-                # Layers neurons pair
-                if layers in layers_neurons.keys():
-                    if neurons in layers_neurons[layers].keys():
-                        layers_neurons[layers][neurons].append(testing_data[count])
+                for horizon in hyperparams["horizon"]:
+                    # Layers neurons pair
+                    if layers in layers_neurons.keys():
+                        if neurons in layers_neurons[layers].keys():
+                            layers_neurons[layers][neurons].append(testing_data[count])
+                        else:
+                            layers_neurons[layers][neurons] = [testing_data[count]]
                     else:
+                        layers_neurons[layers] = dict()
                         layers_neurons[layers][neurons] = [testing_data[count]]
-                else:
-                    layers_neurons[layers] = dict()
-                    layers_neurons[layers][neurons] = [testing_data[count]]
-                # Layers batch pair
-                if layers in layers_batch.keys():
-                    if batch_size in layers_batch[layers].keys():
-                        layers_batch[layers][batch_size].append(testing_data[count])
+                    # Layers horizon
+                    if layers in layers_horizon.keys():
+                        if horizon in layers_horizon[layers].keys():
+                            layers_horizon[layers][horizon].append(testing_data[count])
+                        else:
+                            layers_horizon[layers][horizon] = [testing_data[count]]
                     else:
-                        layers_batch[layers][batch_size] = [testing_data[count]]
-                else:
-                    layers_batch[layers] = dict()
-                    layers_batch[layers][batch_size] = [testing_data[count]]
-                # Layers lr
-                if layers in layers_lr.keys():
-                    if lr in layers_lr[layers].keys():
-                        layers_lr[layers][lr].append(testing_data[count])
+                        layers_horizon[layers] = dict()
+                        layers_horizon[layers][horizon] = [testing_data[count]]
+                    # Neurons horizon
+                    if neurons in neurons_horizon.keys():
+                        if horizon in neurons_horizon[neurons].keys():
+                            neurons_horizon[neurons][horizon].append(testing_data[count])
+                        else:
+                            neurons_horizon[neurons][horizon] = [testing_data[count]]
                     else:
-                        layers_lr[layers][lr] = [testing_data[count]]
-                else:
-                    layers_lr[layers] = dict()
-                    layers_lr[layers][lr] = [testing_data[count]]
-                # Neurons batch
-                if neurons in neurons_batch.keys():
-                    if batch_size in neurons_batch[neurons].keys():
-                        neurons_batch[neurons][batch_size].append(testing_data[count])
-                    else:
-                        neurons_batch[neurons][batch_size] = [testing_data[count]]
-                else:
-                    neurons_batch[neurons] = dict()
-                    neurons_batch[neurons][batch_size] = [testing_data[count]]
-                # Neurons lr
-                if neurons in neurons_lr.keys():
-                    if lr in neurons_lr[neurons].keys():
-                        neurons_lr[neurons][lr].append(testing_data[count])
-                    else:
-                        neurons_lr[neurons][lr] = [testing_data[count]]
-                else:
-                    neurons_lr[neurons] = dict()
-                    neurons_lr[neurons][lr] = [testing_data[count]]
-                # Batch lr
-                if batch_size in batch_lr.keys():
-                    if lr in batch_lr[batch_size].keys():
-                        batch_lr[batch_size][lr].append(testing_data[count])
-                    else:
-                        batch_lr[batch_size][lr] = [testing_data[count]]
-                else:
-                    batch_lr[batch_size] = dict()
-                    batch_lr[batch_size][lr] = [testing_data[count]]
-                count += 1
+                        neurons_horizon[neurons] = dict()
+                        neurons_horizon[neurons][horizon] = [testing_data[count]]
+                    # # Neurons lr
+                    # if neurons in neurons_lr.keys():
+                    #     if lr in neurons_lr[neurons].keys():
+                    #         neurons_lr[neurons][lr].append(testing_data[count])
+                    #     else:
+                    #         neurons_lr[neurons][lr] = [testing_data[count]]
+                    # else:
+                    #     neurons_lr[neurons] = dict()
+                    #     neurons_lr[neurons][lr] = [testing_data[count]]
+                    # # Batch lr
+                    # if batch_size in batch_lr.keys():
+                    #     if lr in batch_lr[batch_size].keys():
+                    #         batch_lr[batch_size][lr].append(testing_data[count])
+                    #     else:
+                    #         batch_lr[batch_size][lr] = [testing_data[count]]
+                    # else:
+                    #     batch_lr[batch_size] = dict()
+                    #     batch_lr[batch_size][lr] = [testing_data[count]]
+                    count += 1
 
-data_wrapper = [layers_neurons, layers_batch, layers_lr, neurons_batch, neurons_lr, batch_lr]
+data_wrapper = [layers_neurons, layers_horizon, neurons_horizon]#, neurons_batch, neurons_lr, batch_lr]
 font = {'family' : 'normal',
         'weight' : 'bold',
         'size'   : 16}
 
 matplotlib.rc('font', **font)
 count = 0
-fig, ax = plt.subplots(3,3)
+fig, ax = plt.subplots(2,2)
 zmin = 1000.0
 zmax = -1.0
 xdata = []
 ydata = []
 zdata = []
-for col in range(3):
-    for row in range(3):
+for col in range(2):
+    for row in range(2):
         if col > row:
             continue
         x = []
@@ -122,8 +112,8 @@ for col in range(3):
         count += 1
 count = 0
 
-for col in range(3):
-    for row in range(3):
+for col in range(2):
+    for row in range(2):
         if col > row:
             continue
         contour = ax[row,col].tricontourf(xdata[count], ydata[count], zdata[count], cmap = 'viridis_r', vmin=zmin, vmax=zmax)#, norm=matplotlib.colors.LogNorm())

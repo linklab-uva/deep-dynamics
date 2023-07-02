@@ -1,19 +1,19 @@
 import yaml
 import os
-import comet_ml
+import wandb
 import torch
 from models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
 from train import train
 
 hyperparams = {
-    "layers" : [4, 6, 8],
-    "neurons" : [64, 128, 256],
-    "batch_size": [4],
-    "lr" : [0.0002],
-    "horizon": [1, 2, 4, 8]
+    "layers" : [2, 6, 10],
+    "neurons" : [16, 64, 256],
+    "batch_size": [4, 16, 64],
+    "lr" : [0.0001, 0.0003, 0.001],
+    "horizon": [1, 4, 16]
 }
 
-def tune_hyperparams(model_cfg, log_comet):
+def tune_hyperparams(model_cfg, log_wandb):
     for layers in hyperparams["layers"]:
         for neurons in hyperparams["neurons"]:
                 for batch_size in hyperparams["batch_size"]:
@@ -48,14 +48,14 @@ def tune_hyperparams(model_cfg, log_comet):
                                 param_dict["MODEL"]["HORIZON"] = horizon
                                 model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
                                 print("Starting experiment: {}".format(experiment_name))
-                                train(model, train_data_loader, val_data_loader, experiment_name, log_comet, output_dir)
+                                train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir)
 
 if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")
     parser.add_argument("model_cfg", type=str, help="Config file for model. Hyperparameters listed in the dictionary will be overwritten")
-    parser.add_argument("--log_comet", action='store_true', default=False, help="Log experiment in comet.ml")
+    parser.add_argument("--log_wandb", action='store_true', default=False, help="Log experiment in wandb")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)
-    tune_hyperparams(argdict["model_cfg"], argdict["log_comet"])
+    tune_hyperparams(argdict["model_cfg"], argdict["log_wandb"])
