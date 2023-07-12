@@ -24,9 +24,9 @@ MODEL:
   NAME: DeepPacejka
   HORIZON: 2
   LAYERS:
-      # - GRU:
-      #   OUT_FEATURES: 4
-      #   LAYERS: 1
+    - GRU:
+      OUT_FEATURES: 4
+      LAYERS: 8
     - DENSE:
       OUT_FEATURES: 128
       ACTIVATION: Mish
