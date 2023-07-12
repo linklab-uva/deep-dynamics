@@ -25,34 +25,19 @@ VEHICLE_SPECS:
   mass: 0.041
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 2
+  HORIZON: 15
   LAYERS:
-    # - GRU:
-    #   OUT_FEATURES: 4
-    #   LAYERS: 1
+    - GRU:
+      OUT_FEATURES: 225
+      LAYERS: 15
     - DENSE:
-      OUT_FEATURES: 256
+      OUT_FEATURES: 280
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 256
+      OUT_FEATURES: 280
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 256
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 256
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 256
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 256
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 256
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 256
+      OUT_FEATURES: 280
       ACTIVATION: Mish
     - DENSE:
       ACTIVATION: Softplus
