@@ -26,7 +26,7 @@ def write_dataset(csv_path, horizon):
                 if float(row[16]) != 0.0:
                     previous_throttle = -float(row[16]) / 2757.89990234
                 else:
-                    previous_throttle = float(row[15])
+                    previous_throttle = float(row[15]) / 100.0
                 continue
             started = True
             vy = float(row[4])
@@ -41,6 +41,10 @@ def write_dataset(csv_path, horizon):
             odometry.append(np.array([vx, vy, vtheta, throttle, steering]))
             throttle_cmds.append(throttle_cmd)
             steering_cmds.append(steering_cmd)
+            if float(row[16]) != 0.0:
+                previous_throttle = -float(row[16]) / 2757.89990234
+            else:
+                previous_throttle = float(row[15]) / 100.0
         odometry = np.array(odometry)
         throttle_cmds = np.array(throttle_cmds)
         steering_cmds = np.array(steering_cmds)
