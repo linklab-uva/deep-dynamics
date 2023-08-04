@@ -87,10 +87,10 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
         if log_wandb:
             wandb.log({"train_loss": mean_train_loss })
             wandb.log({"val_loss": mean_val_loss})
-        if mean_train_loss <= valid_loss_min:
+        if mean_val_loss <= valid_loss_min:
             torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,mean_val_loss))
-            valid_loss_min = mean_train_loss
+            valid_loss_min = mean_val_loss
             if log_wandb:
                 wandb.log({"best_val_loss" : mean_val_loss})
         print("Epoch: {}/{}...".format(i+1, model.epochs),

@@ -15,14 +15,14 @@ else:
 class DeepDynamicsDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_file):
         dataset = np.load(dataset_file)
-        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)[:1000]
-        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)[:1000]
+        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)
+        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)
         X_norm = np.zeros(dataset["features"].shape)
         for i in range(self.X_data.shape[-1]):
             max = np.max(dataset["features"][:,:,i])
             min = np.min(dataset["features"][:,:,i])
             X_norm[:,:,i] = (dataset["features"][:,:,i] - min) / (max - min)
-        self.X_norm = torch.from_numpy(X_norm).float().to(device)[:1000]
+        self.X_norm = torch.from_numpy(X_norm).float().to(device)
 
     def __len__(self):
         return(self.X_data.shape[0])
