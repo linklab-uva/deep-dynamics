@@ -26,9 +26,9 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             hidden_layer_size = model.param_dict["MODEL"]["LAYERS"][0]["OUT_FEATURES"]
             hidden_layers = len(model.param_dict["MODEL"]["LAYERS"]) - 1
         if type(model) is DeepDynamicsModel:
-            project = "deep_dynamics"
+            project = "deep_dynamics_iac"
         elif type(model) is DeepPacejkaModel:
-            project = "deep_pacejka"
+            project = "deep_pacejka_iac"
         wandb.init(
             # set the wandb project where this run will be logged
             project=project,
@@ -103,10 +103,13 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
                 "optimizer_state_dict": model.optimizer.state_dict(),
             }
             checkpoint = Checkpoint.from_dict(checkpoint_data)
+            _val_loss = np.inf
             session.report(
                 {"loss": mean_val_loss},
                 checkpoint=checkpoint,
             )
+        if np.isnan(mean_val_loss):
+            break    
         model.train()
     wandb.finish()
 

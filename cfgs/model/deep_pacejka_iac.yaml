@@ -1,0 +1,44 @@
+STATE:
+  - VX
+  - VY
+  - YAW_RATE
+  - THROTTLE_FB
+  - STEERING_FB
+ACTIONS:
+  - THROTTLE_CMD
+  - STEERING_CMD
+PARAMETERS:
+  - Bf: 
+  - Cf: 
+  - Df: 
+  - Br: 
+  - Cr: 
+  - Dr: 
+  - Frx:
+VEHICLE_SPECS:
+  lf: 1.890
+  lr: 2.610
+  mass: 630.0
+  Izz: 1000.0
+MODEL:
+  NAME: DeepPacejka
+  HORIZON: 14
+  LAYERS:
+    #- GRU:
+    #  OUT_FEATURES: 4
+    #  LAYERS: 8
+    - DENSE:
+      OUT_FEATURES: 175
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 175 
+      ACTIVATION: Mish
+    - DENSE:
+      ACTIVATION: Softplus
+  OPTIMIZATION:
+    LOSS: MSE
+    BATCH_SIZE: 4
+    NUM_EPOCHS: 400
+    OPTIMIZER: Adam
+    LR: 0.0002
+    WEIGHT_DECAY: 0.00001

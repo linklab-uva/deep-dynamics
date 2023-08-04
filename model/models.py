@@ -56,7 +56,7 @@ class ModelBase(nn.Module):
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, h0=None, Ts=0.02):
+    def forward(self, x, h0=None, Ts=0.04):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
@@ -71,7 +71,7 @@ class ModelBase(nn.Module):
         o = self.differential_equation(x, ff, Ts)
         return o, h0, ff
     
-    def test_sys_params(self, x, Ts=0.02):
+    def test_sys_params(self, x, Ts=0.04):
         _, sys_param_dict = self.unpack_sys_params(torch.zeros((1, len(self.sys_params))))
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
