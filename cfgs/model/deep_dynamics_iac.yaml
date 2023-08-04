@@ -1,0 +1,86 @@
+STATE:
+  - VX
+  - VY
+  - YAW_RATE
+  - THROTTLE_FB
+  - STEERING_FB
+ACTIONS:
+  - THROTTLE_CMD
+  - STEERING_CMD
+PARAMETERS:
+  - Bf: 
+  - Cf: 
+  - Df: 
+  - Br: 
+  - Cr: 
+  - Dr: 
+  - Cm1: 
+  - Cm2: 
+  - Cr0: 
+  - Cr2: 
+  - Izz: 
+VEHICLE_SPECS:
+  lf: 1.890
+  lr: 2.610
+  mass: 630.0
+MODEL:
+  NAME: DeepDynamics
+  HORIZON: 14
+  LAYERS:
+    - GRU:
+      OUT_FEATURES: 196
+      LAYERS: 3
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      ACTIVATION: Softplus
+  OPTIMIZATION:
+    LOSS: MSE
+    BATCH_SIZE: 4
+    NUM_EPOCHS: 400
+    OPTIMIZER: Adam
+    LR: 0.0002
+    WEIGHT_DECAY: 0.00001

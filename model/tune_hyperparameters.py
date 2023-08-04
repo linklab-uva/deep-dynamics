@@ -16,7 +16,8 @@ def main(model_cfg, log_wandb):
         "batch_size": tune.choice([2, 4, 8, 16, 32]),
         "lr" : tune.loguniform(1e-4, 1e-3),
         "horizon": tune.choice(range(1,17)),
-        "gru_layers": tune.choice(range(17))
+        "gru_layers": tune.choice(range(17)),
+        "weight_decay": tune.loguniform(1e-6, 1e-4)
     }
 
     scheduler = ASHAScheduler(
@@ -28,7 +29,7 @@ def main(model_cfg, log_wandb):
     )
     result = tune.run(
         partial(tune_hyperparams, model_cfg=model_cfg, log_wandb=log_wandb),
-        resources_per_trial={"cpu": 1, "gpu": 0.15},
+        resources_per_trial={"cpu": 1, "gpu": 0.2},
         config=config,
         num_samples=200,
         scheduler=scheduler,
@@ -38,7 +39,7 @@ def main(model_cfg, log_wandb):
     )
 
 def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
-    dataset_file = "/u/jlc9wr/deep-dynamics/data/DYN-PP-ETHZ_{}.npz".format(hyperparam_config["horizon"])
+    dataset_file = "/u/jlc9wr/deep-dynamics/data/LVMS_23_01_04_A_{}.npz".format(hyperparam_config["horizon"])
     with open(model_cfg, 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     experiment_name = "%dlayers_%dneurons_%dbatch_%flr_%dhorizon_%dgru" % (hyperparam_config["layers"], hyperparam_config["neurons"], hyperparam_config["batch_size"], hyperparam_config["lr"], hyperparam_config["horizon"], hyperparam_config["gru_layers"])
