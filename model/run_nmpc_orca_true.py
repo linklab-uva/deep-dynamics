@@ -4,7 +4,7 @@
 __author__ = 'Achin Jain'
 __email__ = 'achinj@seas.upenn.edu'
 
-import sys
+
 import time as tm
 import numpy as np
 import casadi
@@ -17,11 +17,9 @@ from bayes_race.models import Dynamic
 from bayes_race.tracks import ETHZMobil
 from bayes_race.mpc.planner import ConstantSpeed
 from bayes_race.mpc.nmpc import setupNLP
-from bayes_race.pp import purePursuit
-
-from models import DeepDynamicsModel, string_to_model
-import yaml
+from models import string_to_model
 import torch
+import yaml
 
 #####################################################################
 # CHANGE THIS
@@ -37,8 +35,6 @@ HORIZON = 15
 COST_Q = np.diag([1, 1])
 COST_P = np.diag([0, 0])
 COST_R = np.diag([5/1000, 1])
-LD = 0.2
-KP = 0.6
 
 if not TRACK_CONS:
 	SUFFIX = 'NOCONS-'
@@ -52,6 +48,13 @@ params = ORCA(control='pwm')
 model = Dynamic(**params)
 
 #####################################################################
+# load track
+
+TRACK_NAME = 'ETHZMobil'
+track = ETHZMobil(reference='optimal', longer=True)
+SIM_TIME = 6.5
+
+#####################################################################
 # deep dynamics parameters
 
 param_file = "../cfgs/model/deep_dynamics.yaml"
@@ -62,15 +65,17 @@ ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 ddm.cuda()
 ddm.load_state_dict(torch.load(state_dict))
 
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
+with open(param_file, 'rb') as f:
+	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
+dpm.cuda()
+dpm.load_state_dict(torch.load(state_dict))
+
 #####################################################################
 
-# load track
 
-TRACK_NAME = 'ETHZMobil'
-track = ETHZMobil(reference='optimal', longer=True)
-SIM_TIME = 6.5
-
-#####################################################################
 # extract data
 
 Ts = SAMPLING_TIME
@@ -89,9 +94,11 @@ nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, model, track, track_
 
 # initialize
 states = np.zeros([n_states, n_steps+1])
+dstates = np.zeros([8, n_steps+1])
 ddm_states = np.zeros([3, n_steps+1])
 ddm_forces = np.zeros([3, n_steps+1])
-dstates = np.zeros([8, n_steps+1])
+dpm_states = np.zeros([3, n_steps+1])
+dpm_forces = np.zeros([3, n_steps+1])
 inputs = np.zeros([n_inputs, n_steps])
 time = np.linspace(0, n_steps, n_steps+1)*Ts
 Ffy = np.zeros([n_steps+1])
@@ -107,8 +114,9 @@ x_init[2] = track.psi_init
 x_init[3] = track.vx_init
 dstates[0,0] = x_init[3]
 states[:,0] = x_init
-ddm_states[:,0] = x_init[3:]
 data_x = [*x_init, 0.0, 0.0]
+ddm_states[:,0] = x_init[3:]
+dpm_states[:,0] = x_init[3:]
 print('starting at ({:.1f},{:.1f})'.format(x_init[0], x_init[1]))
 
 # dynamic plot
@@ -145,75 +153,69 @@ for idt in range(n_steps-horizon):
 	uprev = inputs[:,idt-1]
 	x0 = states[:,idt]
 
-	if idt > ddm.horizon:
-		ddm_data = np.array([*dstates[3:, idt-ddm.horizon:idt], *inputs[:,idt-ddm.horizon:idt]], dtype=np.float32)
-		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
-		ddm_state ,_ , ddm_output, ddm_force = ddm(ddm_data)
-		ddm_output = ddm_output.cpu().detach().numpy()[0]
-		idx = 0
-		for param in ddm.sys_params:
-			params[param] = ddm_output[idx]
-			idx += 1
-		model = Dynamic(**params)
-		# planner based on BayesOpt
-		xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
 
-		start = tm.time()
-		umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
-		end = tm.time()
-		inputs[:,idt] = umpc[:,0]
+
+
+	# planner based on BayesOpt
+	xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
+
+	start = tm.time()
+	umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
+	end = tm.time()
+	inputs[:,idt] = umpc[:,0]
+	print("iter: {}, cost: {:.5f}, time: {:.2f}".format(idt, fval, end-start))
+
+	if idt > ddm.horizon:
+		ddm_data = np.array([*dstates[3:, idt-ddm.horizon+1:idt+1], *(inputs[:,idt-ddm.horizon+1:idt+1] - inputs[:,idt-ddm.horizon:idt])], dtype=np.float32)
+		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
+		ddm_state, _ , _ , ddm_force = ddm(ddm_data)
 		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
 		ddm_forces[:,idt+1] = ddm_force
-	else:
-		start = tm.time()
-		upp = purePursuit(x0, LD, KP, track, params)
-		end = tm.time()
-		inputs[:,idt] = upp
-
-	print("iter: {}, time: {:.2f}".format(idt, end-start))
-
+		dpm_data = np.array([*dstates[3:, idt-dpm.horizon+1:idt+1], *(inputs[:,idt-dpm.horizon+1:idt+1] - inputs[:,idt-dpm.horizon:idt])], dtype=np.float32)
+		dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
+		dpm_state, _ , _ , dpm_force = dpm(dpm_data)
+		dpm_states[:,idt+1] = dpm_state.cpu().detach().numpy()
+		dpm_forces[:,idt+1] = dpm_force
+	
 	# update current position with numerical integration (exact model)
 	x_next, data_x = model.sim_continuous(states[:,idt], inputs[:,idt].reshape(-1,1), [0, Ts], data_x)
 	states[:,idt+1] = x_next[:,-1]
 	dstates[:,idt+1] = data_x
-	Ffy[idt+1], Frx[idt+1], Fry[idt+1] = model.calc_forces(states[:,idt], inputs[:,idt])
+	Ffy[idt+1], Frx[idt+1], Fry[idt+1] = model.calc_forces(data_x, inputs[:,idt])
 
-	if idt > ddm.horizon:
-		# forward sim to predict over the horizon
-		hstates[:,0] = x0
-		hstates2[:,0] = x0
-		for idh in range(horizon):
-			x_next, data_x = model.sim_continuous(hstates[:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
-			hstates[:,idh+1] = x_next[:,-1]
-			hstates2[:,idh+1] = xmpc[:,idh+1]
+	# forward sim to predict over the horizon
+	hstates[:,0] = x0
+	hstates2[:,0] = x0
+	for idh in range(horizon):
+		x_next, _ = model.sim_continuous(hstates[:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+		hstates[:,idh+1] = x_next[:,-1]
+		hstates2[:,idh+1] = xmpc[:,idh+1]
 
-		# update plot
-		LnS.set_xdata(states[0,:idt+1])
-		LnS.set_ydata(states[1,:idt+1])
+	# update plot
+	LnS.set_xdata(states[0,:idt+1])
+	LnS.set_ydata(states[1,:idt+1])
 
-		LnR.set_xdata(xref[0,1:])
-		LnR.set_ydata(xref[1,1:])
+	LnR.set_xdata(xref[0,1:])
+	LnR.set_ydata(xref[1,1:])
 
-		LnP.set_xdata(states[0,idt])
-		LnP.set_ydata(states[1,idt])
+	LnP.set_xdata(states[0,idt])
+	LnP.set_ydata(states[1,idt])
 
-		LnH.set_xdata(hstates[0])
-		LnH.set_ydata(hstates[1])
+	LnH.set_xdata(hstates[0])
+	LnH.set_ydata(hstates[1])
 
-		LnH2.set_xdata(hstates2[0])
-		LnH2.set_ydata(hstates2[1])
-		
-		LnFfy.set_xdata(time[:idt+1])
-		LnFfy.set_ydata(Ffy[:idt+1])
+	LnH2.set_xdata(hstates2[0])
+	LnH2.set_ydata(hstates2[1])
+	
+	LnFfy.set_xdata(time[:idt+1])
+	LnFfy.set_ydata(Ffy[:idt+1])
 
-		LnFrx.set_xdata(time[:idt+1])
-		LnFrx.set_ydata(Frx[:idt+1])
+	LnFrx.set_xdata(time[:idt+1])
+	LnFrx.set_ydata(Frx[:idt+1])
 
-		LnFry.set_xdata(time[:idt+1])
-		LnFry.set_ydata(Fry[:idt+1])
-	else:
-		ddm_states[:,idt+1] = x_next[3:,-1]
-		ddm_forces[:,idt+1] = np.array([Ffy[idt+1], Frx[idt+1], Fry[idt+1]])
+	LnFry.set_xdata(time[:idt+1])
+	LnFry.set_ydata(Fry[:idt+1])
+
 	plt.pause(Ts/100)
 
 plt.ioff()
@@ -223,14 +225,16 @@ plt.ioff()
 
 if SAVE_RESULTS:
 	np.savez(
-		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-DYNAMICS"),
+		'../data/DYN-NMPC-{}{}.npz'.format(SUFFIX, TRACK_NAME),
 		time=time,
 		states=states,
+		ddm_states=ddm_states,
+		dpm_states=dpm_states,
+		ddm_forces=ddm_forces,
+		dpm_forces=dpm_forces,
+		forces=np.vstack([Ffy, Frx, Fry]),
 		dstates=dstates,
 		inputs=inputs,
-		ddm_states=ddm_states,
-		ddm_forces=ddm_forces,
-		forces=np.vstack([Ffy, Frx, Fry])
 		)
 
 #####################################################################

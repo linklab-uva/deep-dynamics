@@ -14,7 +14,7 @@ from matplotlib.gridspec import GridSpec
 
 from bayes_race.params import ORCA
 from bayes_race.models import Dynamic
-from bayes_race.tracks import ETHZMobil
+from bayes_race.tracks import ETHZ, ETHZMobil
 from bayes_race.mpc.planner import ConstantSpeed
 from bayes_race.mpc.nmpc import setupNLP
 from bayes_race.pp import purePursuit
@@ -54,8 +54,8 @@ model = Dynamic(**params)
 #####################################################################
 # deep dynamics parameters
 
-param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/13layers_108neurons_4batch_0.000317lr_8horizon_11gru/epoch_235.pth"
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -68,7 +68,7 @@ ddm.load_state_dict(torch.load(state_dict))
 
 TRACK_NAME = 'ETHZMobil'
 track = ETHZMobil(reference='optimal', longer=True)
-SIM_TIME = 6.5
+SIM_TIME = 7.0
 
 #####################################################################
 # extract data
@@ -89,9 +89,9 @@ nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, model, track, track_
 
 # initialize
 states = np.zeros([n_states, n_steps+1])
+dstates = np.zeros([8, n_steps+1])
 ddm_states = np.zeros([3, n_steps+1])
 ddm_forces = np.zeros([3, n_steps+1])
-dstates = np.zeros([8, n_steps+1])
 inputs = np.zeros([n_inputs, n_steps])
 time = np.linspace(0, n_steps, n_steps+1)*Ts
 Ffy = np.zeros([n_steps+1])
@@ -155,13 +155,17 @@ for idt in range(n_steps-horizon):
 			params[param] = ddm_output[idx]
 			idx += 1
 		model = Dynamic(**params)
+
+
 		# planner based on BayesOpt
 		xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
 
 		start = tm.time()
 		umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
 		end = tm.time()
-		inputs[:,idt] = umpc[:,0]
+		upp = purePursuit(x0, LD, KP, track, params)
+		inputs[0,idt] = upp[0]
+		inputs[1,idt] = umpc[1,0]
 		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
 		ddm_forces[:,idt+1] = ddm_force
 	else:
@@ -169,7 +173,6 @@ for idt in range(n_steps-horizon):
 		upp = purePursuit(x0, LD, KP, track, params)
 		end = tm.time()
 		inputs[:,idt] = upp
-
 	print("iter: {}, time: {:.2f}".format(idt, end-start))
 
 	# update current position with numerical integration (exact model)
@@ -214,6 +217,7 @@ for idt in range(n_steps-horizon):
 	else:
 		ddm_states[:,idt+1] = x_next[3:,-1]
 		ddm_forces[:,idt+1] = np.array([Ffy[idt+1], Frx[idt+1], Fry[idt+1]])
+
 	plt.pause(Ts/100)
 
 plt.ioff()
@@ -223,7 +227,7 @@ plt.ioff()
 
 if SAVE_RESULTS:
 	np.savez(
-		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-DYNAMICS"),
+		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA"),
 		time=time,
 		states=states,
 		dstates=dstates,
