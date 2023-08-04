@@ -53,32 +53,32 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
         train_loss_accum = 0.0
         if model.is_rnn:
             h = model.init_hidden(model.batch_size)
-        for inputs, labels in train_data_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, labels, norm_inputs in train_data_loader:
+            inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
             if model.is_rnn:
                 h = h.data
             model.zero_grad()
             if model.is_rnn:
-                output, h, _ = model(inputs, h)
+                output, h, _ = model(inputs, norm_inputs, h)
             else:
-                output, _, _ = model(inputs)
+                output, _, _ = model(inputs, norm_inputs)
             loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             train_loss_accum += loss.item()
             train_steps += 1
             loss.backward()
             model.optimizer.step()
         model.eval()
-        for inp, lab in val_data_loader:
+        for inp, lab, norm in val_data_loader:
             val_steps = 0
             val_loss_accum = 0.0
             if model.is_rnn:
                 val_h = model.init_hidden(inp.shape[0])
-            inp, lab = inp.to(device), lab.to(device)
+            inp, lab, norm = inp.to(device), lab.to(device), norm.to(device)
             if model.is_rnn:
                 val_h = val_h.data
-                out, val_h, _ = model(inp, val_h)
+                out, val_h, _ = model(inp, norm, val_h)
             else:
-                out, _, _ = model(inp)
+                out, _, _ = model(inp, norm)
             val_loss = model.loss_function(out.squeeze(), lab.squeeze().float())
             val_loss_accum += val_loss.item()
             val_steps += 1
@@ -87,10 +87,10 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
         if log_wandb:
             wandb.log({"train_loss": mean_train_loss })
             wandb.log({"val_loss": mean_val_loss})
-        if mean_val_loss <= valid_loss_min:
+        if mean_train_loss <= valid_loss_min:
             torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,mean_val_loss))
-            valid_loss_min = mean_val_loss
+            valid_loss_min = mean_train_loss
             if log_wandb:
                 wandb.log({"best_val_loss" : mean_val_loss})
         print("Epoch: {}/{}...".format(i+1, model.epochs),

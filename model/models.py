@@ -15,14 +15,22 @@ else:
 class DeepDynamicsDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_file):
         dataset = np.load(dataset_file)
-        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)
-        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)
+        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)[:1000]
+        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)[:1000]
+        X_norm = np.zeros(dataset["features"].shape)
+        for i in range(self.X_data.shape[-1]):
+            max = np.max(dataset["features"][:,:,i])
+            min = np.min(dataset["features"][:,:,i])
+            X_norm[:,:,i] = (dataset["features"][:,:,i] - min) / (max - min)
+        self.X_norm = torch.from_numpy(X_norm).float().to(device)[:1000]
+
     def __len__(self):
         return(self.X_data.shape[0])
     def __getitem__(self, idx):
         x = self.X_data[idx]
         y = self.y_data[idx]
-        return x, y
+        x_norm = self.X_norm[idx]
+        return x, y, x_norm
     def split(self, percent):
         split_id = int(len(self)* 0.8)
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
@@ -51,18 +59,18 @@ class ModelBase(nn.Module):
         self.actions = list(self.param_dict["ACTIONS"])
         self.sys_params = list([*(list(p.keys())[0] for p in self.param_dict["PARAMETERS"])])
         self.vehicle_specs = self.param_dict["VEHICLE_SPECS"]
-
+    
     @abstractmethod
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, h0=None, Ts=0.04):
+    def forward(self, x, x_norm, h0=None, Ts=0.04):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
-                    ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
+                    ff, h0 = self.feed_forward[0](x_norm[:,:,:7], h0)
                 else:
-                    ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
+                    ff = self.feed_forward[i](torch.reshape(x_norm[:,:,:7], (len(x_norm), -1)))
             else:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
                     ff, h0 = self.feed_forward[0](ff, h0)
