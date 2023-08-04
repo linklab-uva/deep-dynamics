@@ -18,7 +18,7 @@ PARAMETERS:
   - Cm2: 
   - Cr0: 
   - Cr2: 
-  - Izz: 
+  - Iz: 
 VEHICLE_SPECS:
   lf: 1.890
   lr: 2.610

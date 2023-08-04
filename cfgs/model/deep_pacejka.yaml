@@ -19,7 +19,7 @@ VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
-  Izz: 27.8e-6
+  Iz: 27.8e-6
 MODEL:
   NAME: DeepPacejka
   HORIZON: 2
