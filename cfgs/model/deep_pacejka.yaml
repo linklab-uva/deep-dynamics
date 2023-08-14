@@ -22,34 +22,37 @@ VEHICLE_SPECS:
   Iz: 27.8e-6
 MODEL:
   NAME: DeepPacejka
-  HORIZON: 2
+  HORIZON: 4
   LAYERS:
     - GRU:
-      OUT_FEATURES: 4
-      LAYERS: 8
+      OUT_FEATURES: 16
+      LAYERS: 7
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128 
+      OUT_FEATURES: 40 
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 128
+      OUT_FEATURES: 40
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 40
       ACTIVATION: Mish
     - DENSE:
       ACTIVATION: Softplus
