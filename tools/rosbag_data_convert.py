@@ -19,14 +19,14 @@ import numpy as np
 import pygeodesy
 import math
 import yaml
+import sys
 
-ROSBAG_filepath = '/home/ning/rosbag/rosbag2_Autoverse/rosbag2_Autoverse_TMS_04_11' # '/home/ning/rosbag/rosbags_vegas_2023/LVMS_2023_01_02/rosbag2_2023_01_02-14_12_24', 
-EGO_topics      = ['/vehicle/uva_odometry', '/vehicle/uva_acceleration', '/raptor_dbw_interface/steering_report','/raptor_dbw_interface/wheel_speed_report',
-                   '/raptor_dbw_interface/accelerator_pedal_cmd', '/raptor_dbw_interface/brake_cmd']
-ego_types       = ['nav_msgs/msg/Odometry','geometry_msgs/msg/AccelWithCovarianceStamped','raptor_dbw_msgs/msg/SteeringReport', 'raptor_dbw_msgs/msg/WheelSpeedReport',
-                   'raptor_dbw_msgs/msg/AcceleratorPedalCmd', 'raptor_dbw_msgs/msg/BrakeCmd']
-CSV_filename    = 'Autoverse_TMS_04_11.csv'
-CSV_filepath    = '/home/ning/dynamics_ws/scripts/data_process/input/'
+ROSBAG_filepath =  sys.argv[1]
+EGO_topics      = ['/vehicle/uva_odometry', '/vehicle/uva_acceleration', '/raptor_dbw_interface/steering_report',
+                   '/raptor_dbw_interface/accelerator_pedal_report']
+ego_types       = ['nav_msgs/msg/Odometry','geometry_msgs/msg/AccelWithCovarianceStamped','raptor_dbw_msgs/msg/SteeringReport',
+                   'raptor_dbw_msgs/msg/AcceleratorPedalReport']
+CSV_filepath    = sys.argv[2]
 
 def guess_msgtype(path: Path) -> str:
     """Guess message type name from path."""
@@ -40,8 +40,8 @@ def absoluteFilePaths(directory):
         for f in filenames:
             yield os.path.abspath(os.path.join(dirpath, f))
 # Import ROS2 Types
-novatel_msgs = absoluteFilePaths('/home/ning/autowarefork/src/external/novatel_gps_driver/novatel_oem7_msgs/msg')
-raptor_msgs = absoluteFilePaths('/home/ning/autowarefork/src/external/raptor-dbw-ros2/raptor_dbw_msgs/msg')
+novatel_msgs = absoluteFilePaths('/home/chros/samirauto/src/drivers/novatel_gps_driver/novatel_oem7_msgs/msg')
+raptor_msgs = absoluteFilePaths('/home/chros/samirauto/src/msgs/raptor_dbw_msgs/raptor_dbw_msgs/msg')
 add_types = {}
 
 for pathstr in novatel_msgs:
@@ -90,22 +90,15 @@ ego_data   = read_bag_file(ROSBAG_filepath, EGO_topics, ego_types)
 odom_data  = ego_data[EGO_topics[0]]
 accel_data = ego_data[EGO_topics[1]]
 steer_data = ego_data[EGO_topics[2]]
-wheel_data = ego_data[EGO_topics[3]]
-throttle_data = ego_data[EGO_topics[4]]
-brake_data = ego_data[EGO_topics[5]]
+throttle_data = ego_data[EGO_topics[3]]
 
 odom_state = np.zeros((len(odom_data),9))
 accel_state = np.zeros((len(accel_data),2))
 steer_state = np.zeros((len(steer_data),2))
-wheel_state = np.zeros((len(wheel_data),5))
 throttle_state = np.zeros((len(throttle_data)))
-brake_state = np.zeros((len(brake_data)))
 
 for i in range(len(throttle_data)):
-    brake_state[i] = brake_data[i][1].pedal_cmd
-
-for i in range(len(throttle_data)):
-    throttle_state[i] = throttle_data[i][1].pedal_cmd
+    throttle_state[i] = throttle_data[i][1].pedal_output
 
 for i in range(len(odom_data)):
     odom_state[i,0] = odom_data[i][1].header.stamp.sec + odom_data[i][1].header.stamp.nanosec*1e-9
@@ -136,16 +129,9 @@ for i in range(len(steer_data)):
     steer_state[i,0] = steer_data[i][1].header.stamp.sec + steer_data[i][1].header.stamp.nanosec*1e-9
     steer_state[i,1] = steer_data[i][1].steering_wheel_angle*0.0545*(math.pi/180.0)
 
-for i in range(len(wheel_data)):
-    wheel_state[i,0] = wheel_data[i][1].header.stamp.sec + wheel_data[i][1].header.stamp.nanosec*1e-9
-    wheel_state[i,1] = wheel_data[i][1].front_left
-    wheel_state[i,2] = wheel_data[i][1].front_right
-    wheel_state[i,3] = wheel_data[i][1].rear_left
-    wheel_state[i,4] = wheel_data[i][1].rear_right
 
-
-start_time = max([odom_state[0,0],accel_state[0,0],steer_state[0,0],wheel_state[0,0]])
-end_time   = min([odom_state[-1,0],accel_state[-1,0],steer_state[-1,0],wheel_state[-1,0]])
+start_time = max([odom_state[0,0],accel_state[0,0],steer_state[0,0]])
+end_time   = min([odom_state[-1,0],accel_state[-1,0],steer_state[-1,0]])
 time_range = end_time-start_time
 
 data_cols    = 17
@@ -163,12 +149,7 @@ state_roll  = interp1d(odom_state[:,0],odom_state[:,8])
 state_delta = interp1d(steer_state[:,0],steer_state[:,1])
 state_accx  = interp1d(accel_state[:,0],accel_state[:,1])
 state_deltadelta = np.diff(state_delta(sample_times))/(0.04)
-state_wfl  = interp1d(wheel_state[:,0],wheel_state[:,1])
-state_wfr  = interp1d(wheel_state[:,0],wheel_state[:,2])
-state_wrl  = interp1d(wheel_state[:,0],wheel_state[:,3])
-state_wrf  = interp1d(wheel_state[:,0],wheel_state[:,4])
 state_thrt = interp1d(TB_times,throttle_state)
-state_brk  = interp1d(TB_times,brake_state)
 '''
 if len(accel_state) > len(throttle_state) or len(accel_state) > len(brake_state):
     state_thrt = interp1d(accel_state[:len(throttle_state),0],throttle_state)
@@ -190,13 +171,8 @@ sample_data[:,6] = state_delta(sample_times)
 sample_data[:,7] = state_omega(sample_times)
 sample_data[:,8] = state_accx(sample_times)
 sample_data[:-1,9] = state_deltadelta
-sample_data[:,10] = state_wfl(sample_times)
-sample_data[:,11] = state_wfr(sample_times)
-sample_data[:,12] = state_wrl(sample_times)
-sample_data[:,13] = state_wrf(sample_times)
-sample_data[:,14] = state_roll(sample_times)
-sample_data[:,15] = state_thrt(sample_times)
-sample_data[:,16] = state_brk(sample_times)
+sample_data[:,10] = state_roll(sample_times)
+sample_data[:,11] = state_thrt(sample_times)
 
 # fig, axs = plt.subplots(2)
 # fig.suptitle('ANGLES')
@@ -207,9 +183,9 @@ sample_data[:,16] = state_brk(sample_times)
 # plt.show()
 data_save = True
 if data_save:
-    header = '{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format('time(s)','x(m)','y(m)','vx(m/s)','vy(m/s)','phi(rad)','delta(rad)','omega(rad/s)',
-                    'ax(m/s^2)','deltadelta(rad/s)','wheel_fl(kmph)','wheel_fr(kmph)','wheel_rl(kmph)','wheel_rr(kmph)','roll(rad)','throttle_ped_cmd(%)','brake_ped_cmd(kPa)')
-    np.savetxt(CSV_filepath + CSV_filename,sample_data,delimiter=',',fmt='%0.8f',header=header)
+    header = '{},{},{},{},{},{},{},{},{},{},{},{}'.format('time(s)','x(m)','y(m)','vx(m/s)','vy(m/s)','phi(rad)','delta(rad)','omega(rad/s)',
+                    'ax(m/s^2)','deltadelta(rad/s)','roll(rad)','throttle_ped_cmd(%)')
+    np.savetxt(CSV_filepath,sample_data,delimiter=',',fmt='%0.8f',header=header)
 
 # def sample_data(i, sample_data, sample_times, odom_data, steer_data, wheel_data, accel_data):
 #     x_time = sample_times[i]

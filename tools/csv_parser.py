@@ -23,28 +23,28 @@ def write_dataset(csv_path, horizon):
             if abs(vx) < 10:
                 if started:
                     break
-                if float(row[16]) != 0.0:
-                    previous_throttle = -float(row[16]) / 2757.89990234
+                if float(row[12]) != 0.0:
+                    previous_throttle = -float(row[12]) / 2757.89990234
                 else:
-                    previous_throttle = float(row[15]) / 100.0
+                    previous_throttle = float(row[11]) / 100.0
                 continue
             started = True
             vy = float(row[4])
             vtheta = float(row[7])
             steering = float(row[6])
-            if float(row[16]) > 1.0:
-                throttle = -float(row[16]) / 2757.89990234 # max brake pressure
+            if float(row[12]) > 1.0:
+                throttle = -float(row[12]) / 2757.89990234 # max brake pressure
             else:
                 throttle = previous_throttle
             steering_cmd = float(row[9]) * 0.04 # sampling time
-            throttle_cmd = float(row[15]) / 100.0 - previous_throttle
+            throttle_cmd = float(row[11]) / 100.0 - previous_throttle
             odometry.append(np.array([vx, vy, vtheta, throttle, steering]))
             throttle_cmds.append(throttle_cmd)
             steering_cmds.append(steering_cmd)
-            if float(row[16]) != 0.0:
-                previous_throttle = -float(row[16]) / 2757.89990234
+            if float(row[12]) != 0.0:
+                previous_throttle = -float(row[12]) / 2757.89990234
             else:
-                previous_throttle = float(row[15]) / 100.0
+                previous_throttle = float(row[11]) / 100.0
         odometry = np.array(odometry)
         throttle_cmds = np.array(throttle_cmds)
         steering_cmds = np.array(steering_cmds)
