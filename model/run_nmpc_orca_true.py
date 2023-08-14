@@ -14,7 +14,7 @@ from matplotlib.gridspec import GridSpec
 
 from bayes_race.params import ORCA
 from bayes_race.models import Dynamic
-from bayes_race.tracks import ETHZMobil
+from bayes_race.tracks import ETHZMobil, ETHZ
 from bayes_race.mpc.planner import ConstantSpeed
 from bayes_race.mpc.nmpc import setupNLP
 from models import string_to_model
@@ -50,8 +50,8 @@ model = Dynamic(**params)
 #####################################################################
 # load track
 
-TRACK_NAME = 'ETHZMobil'
-track = ETHZMobil(reference='optimal', longer=True)
+TRACK_NAME = 'ETHZ'
+track = ETHZ(reference='optimal', longer=True)
 SIM_TIME = 6.5
 
 #####################################################################
@@ -106,6 +106,10 @@ Frx = np.zeros([n_steps+1])
 Fry = np.zeros([n_steps+1])
 hstates = np.zeros([n_states,horizon+1])
 hstates2 = np.zeros([n_states,horizon+1])
+ddm_predictions = np.zeros([n_steps+1, n_states, horizon+1])
+ddm_horizon = np.zeros([5, horizon+ddm.horizon])
+dpm_predictions = np.zeros([n_steps+1, n_states, horizon+1])
+dpm_horizon = np.zeros([5, horizon+dpm.horizon])
 
 projidx = 0
 x_init = np.zeros(n_states)
@@ -165,17 +169,43 @@ for idt in range(n_steps-horizon):
 	inputs[:,idt] = umpc[:,0]
 	print("iter: {}, cost: {:.5f}, time: {:.2f}".format(idt, fval, end-start))
 
-	if idt > ddm.horizon:
-		ddm_data = np.array([*dstates[3:, idt-ddm.horizon+1:idt+1], *(inputs[:,idt-ddm.horizon+1:idt+1] - inputs[:,idt-ddm.horizon:idt])], dtype=np.float32)
-		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
-		ddm_state, _ , _ , ddm_force = ddm(ddm_data)
-		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
-		ddm_forces[:,idt+1] = ddm_force
-		dpm_data = np.array([*dstates[3:, idt-dpm.horizon+1:idt+1], *(inputs[:,idt-dpm.horizon+1:idt+1] - inputs[:,idt-dpm.horizon:idt])], dtype=np.float32)
-		dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
-		dpm_state, _ , _ , dpm_force = dpm(dpm_data)
-		dpm_states[:,idt+1] = dpm_state.cpu().detach().numpy()
-		dpm_forces[:,idt+1] = dpm_force
+	if idt > ddm.horizon and idt > dpm.horizon:
+		ddm_predictions[idt,:,0] = x0
+		dpm_predictions[idt,:,0] = x0
+		ddm_horizon[:3,:ddm.horizon] = states[3:, idt-ddm.horizon+1:idt+1]
+		dpm_horizon[:3,:dpm.horizon] = states[3:, idt-dpm.horizon+1:idt+1]
+		ddm_horizon[3:,:ddm.horizon] = inputs[:, idt-ddm.horizon+1:idt+1]
+		dpm_horizon[3:,:dpm.horizon] = inputs[:, idt-dpm.horizon+1:idt+1]
+		ddm_horizon[3:,ddm.horizon:] = umpc
+		dpm_horizon[3:,dpm.horizon:] = umpc
+		for idh in range(horizon):
+			# if idt + idh > n_steps or idt + idh > n_steps:
+			# 	break
+			# Create DDM model
+			ddm_data = np.array([*ddm_horizon[:, idh:idh+ddm.horizon], *(ddm_horizon[3:,idh+1:idh+ddm.horizon+1] - ddm_horizon[3:,idh:idh+ddm.horizon])], dtype=np.float32)
+			ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
+			ddm_state, _ , ddm_output , ddm_force = ddm(ddm_data)
+			ddm_output = ddm_output.cpu().detach().numpy()[0]
+			ddm_state = ddm_state.cpu().detach().numpy()
+			ddm_forces[:,idt+1] = ddm_force
+			# Create DPM model
+			dpm_data = np.array([*dpm_horizon[:, idh:idh+dpm.horizon], *(dpm_horizon[3:,idh+1:idh+dpm.horizon+1] - dpm_horizon[3:,idh:idh+dpm.horizon])], dtype=np.float32)
+			dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
+			dpm_state, _ , dpm_output , dpm_force = dpm(dpm_data)
+			dpm_output = dpm_output.cpu().detach().numpy()[0]
+			dpm_state = dpm_state.cpu().detach().numpy()
+			dpm_forces[:,idt+1] = dpm_force
+			# Predict over horizon
+			ddm_predictions[idt,0,idh+1] = ddm_predictions[idt,0,idh] + (ddm_predictions[idt,3,idh]*np.cos(ddm_predictions[idt,2,idh]) - ddm_predictions[idt,4,idh]*np.sin(ddm_predictions[idt,2,idh])) * Ts
+			ddm_predictions[idt,1,idh+1] = ddm_predictions[idt,1,idh] + (ddm_predictions[idt,3,idh]*np.sin(ddm_predictions[idt,2,idh]) + ddm_predictions[idt,4,idh]*np.cos(ddm_predictions[idt,2,idh])) * Ts
+			ddm_predictions[idt,2,idh+1] = ddm_predictions[idt,2,idh] + ddm_predictions[idt,5,idh] * Ts
+			ddm_predictions[idt,3:,idh+1] = ddm_state
+			dpm_predictions[idt,0,idh+1] = dpm_predictions[idt,0,idh] + (dpm_predictions[idt,3,idh]*np.cos(dpm_predictions[idt,2,idh]) - dpm_predictions[idt,4,idh]*np.sin(dpm_predictions[idt,2,idh])) * Ts
+			dpm_predictions[idt,1,idh+1] = dpm_predictions[idt,1,idh] + (dpm_predictions[idt,3,idh]*np.sin(dpm_predictions[idt,2,idh]) + dpm_predictions[idt,4,idh]*np.cos(dpm_predictions[idt,2,idh])) * Ts
+			dpm_predictions[idt,2,idh+1] = dpm_predictions[idt,2,idh] + dpm_predictions[idt,5,idh] * Ts
+			dpm_predictions[idt,3:,idh+1] = dpm_state
+			ddm_horizon[:3,ddm.horizon+idh] = ddm_predictions[idt,3:,idh+1]
+			dpm_horizon[:3,dpm.horizon+idh] = dpm_predictions[idt,3:,idh+1]
 	
 	# update current position with numerical integration (exact model)
 	x_next, data_x = model.sim_continuous(states[:,idt], inputs[:,idt].reshape(-1,1), [0, Ts], data_x)
@@ -232,6 +262,8 @@ if SAVE_RESULTS:
 		dpm_states=dpm_states,
 		ddm_forces=ddm_forces,
 		dpm_forces=dpm_forces,
+		ddm_predictions=ddm_predictions,
+		dpm_predictions=dpm_predictions,
 		forces=np.vstack([Ffy, Frx, Fry]),
 		dstates=dstates,
 		inputs=inputs,

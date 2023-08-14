@@ -17,7 +17,6 @@ def main(model_cfg, log_wandb):
         "lr" : tune.loguniform(1e-4, 1e-3),
         "horizon": tune.choice(range(1,17)),
         "gru_layers": tune.choice(range(17)),
-        "weight_decay": tune.loguniform(1e-6, 1e-4)
     }
 
     scheduler = ASHAScheduler(

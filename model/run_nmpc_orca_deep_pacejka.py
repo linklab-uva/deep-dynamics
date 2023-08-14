@@ -40,6 +40,13 @@ COST_R = np.diag([5/1000, 1])
 LD = 0.2
 KP = 0.6
 
+# drivetrain coefficients
+Cm1 = 0.287
+Cm2 = 0.0545
+Cr0 = 0.0518
+Cr2 = 0.00035
+Iz = 27.8e-6
+
 if not TRACK_CONS:
 	SUFFIX = 'NOCONS-'
 else:
@@ -154,6 +161,11 @@ for idt in range(n_steps-horizon):
 		for param in ddm.sys_params:
 			params[param] = ddm_output[idx]
 			idx += 1
+		params["Cm1"] = Cm1 + np.random.normal(scale=0.1*Cm1)
+		params["Cm2"] = Cm2 + np.random.normal(scale=0.1*Cm2)
+		params["Cr0"] = Cr0 + np.random.normal(scale=0.1*Cr0)
+		params["Cr2"] = Cr2 + np.random.normal(scale=0.1*Cr2)
+		params["Iz"] = Iz + np.random.normal(scale=0.1*Iz)
 		model = Dynamic(**params)
 
 
@@ -164,8 +176,7 @@ for idt in range(n_steps-horizon):
 		umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
 		end = tm.time()
 		upp = purePursuit(x0, LD, KP, track, params)
-		inputs[0,idt] = upp[0]
-		inputs[1,idt] = umpc[1,0]
+		inputs[:,idt] = umpc[:,0]
 		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
 		ddm_forces[:,idt+1] = ddm_force
 	else:

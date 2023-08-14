@@ -41,10 +41,11 @@ class ModelBase(nn.Module):
         self.param_dict = param_dict
         layers = build_network(self.param_dict)
         self.batch_size = self.param_dict["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"]
+        self.horizon =  self.param_dict["MODEL"]["HORIZON"]
         if self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS"):
             self.is_rnn = True
             self.rnn_n_layers = self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS")
-            self.rnn_hiden_dim = self.param_dict["MODEL"]["HORIZON"]
+            self.rnn_hiden_dim = self.horizon
             layers.insert(1, nn.Flatten())
         else:
             self.is_rnn = False
@@ -64,20 +65,26 @@ class ModelBase(nn.Module):
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, x_norm, h0=None, Ts=0.04):
+    def forward(self, x, x_norm=None, h0=None, Ts=0.04):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
-                    ff, h0 = self.feed_forward[0](x_norm[:,:,:7], h0)
+                    if x_norm:
+                        ff, h0 = self.feed_forward[0](x_norm[:,:,:7], h0)
+                    else:
+                        ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
                 else:
-                    ff = self.feed_forward[i](torch.reshape(x_norm[:,:,:7], (len(x_norm), -1)))
+                    if x_norm:
+                        ff = self.feed_forward[i](torch.reshape(x_norm[:,:,:7], (len(x_norm), -1)))
+                    else:
+                        ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
             else:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
                     ff, h0 = self.feed_forward[0](ff, h0)
                 else:
                     ff = self.feed_forward[i](ff)
-        o = self.differential_equation(x, ff, Ts)
-        return o, h0, ff
+        o, forces = self.differential_equation(x, ff, Ts)
+        return o, h0, ff, forces
     
     def test_sys_params(self, x, Ts=0.04):
         _, sys_param_dict = self.unpack_sys_params(torch.zeros((1, len(self.sys_params))))
@@ -142,7 +149,7 @@ class DeepDynamicsModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt
+        return x[:,-1,:3] + dxdt, np.array([Frx, Ffy, Fry])
 
 
 class DeepPacejkaModel(ModelBase):
@@ -163,7 +170,7 @@ class DeepPacejkaModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/self.vehicle_specs["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt
+        return x[:,-1,:3] + dxdt, np.array([sys_param_dict["Frx"], Ffy, Fry])
 
 
 string_to_model = {

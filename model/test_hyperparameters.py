@@ -31,7 +31,7 @@ def test_hyperparams(model_cfg, output_csv, log_wandb):
         neurons = int(hyperparam_values[1])
         horizon = int(hyperparam_values[4])
         gru_layers = int(hyperparam_values[5])
-        dataset_file = "../data/LVMS_23_01_04_B_{}.npz".format(horizon)
+        dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         test_dataset = DeepDynamicsDataset(dataset_file)
