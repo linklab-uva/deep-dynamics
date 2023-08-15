@@ -20,67 +20,36 @@ PARAMETERS:
   - Cr2: 
   - Iz: 
 VEHICLE_SPECS:
-  lf: 1.890
-  lr: 2.610
-  mass: 630.0
+  lf: 1.248
+  lr: 1.7328
+  mass: 790.0
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 14
+  HORIZON: 1
   LAYERS:
-    - GRU:
-      OUT_FEATURES: 196
-      LAYERS: 3
+    # - GRU:
+    #   OUT_FEATURES: 81
+    #   LAYERS: 4
     - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+      OUT_FEATURES: 200
+      ACTIVATION: ELU
     - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+      OUT_FEATURES: 200
+      ACTIVATION: ELU
     - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+      OUT_FEATURES: 200
+      ACTIVATION: ELU
     - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+      OUT_FEATURES: 200
+      ACTIVATION: ELU
     - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+      OUT_FEATURES: 200
+      ACTIVATION: ELU
     - DENSE:
       ACTIVATION: Softplus
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 128
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0002
-    WEIGHT_DECAY: 0.00001
+    LR: 0.0001

@@ -11,27 +11,36 @@ PARAMETERS:
   - Bf: 
   - Cf: 
   - Df: 
+  - Ef:
   - Br: 
   - Cr: 
   - Dr: 
-  - Frx:
+  - Er:
+  - Cm1: 
+  - Cr0: 
+  - Cr2: 
+  - Iz: 
+  - mass:
+  - Ffz:
+  - Frz:
 VEHICLE_SPECS:
-  lf: 1.248
-  lr: 1.7328
-  mass: 790.0
-  Iz: 1000.0
+  lf: 1.890
+  lr: 2.610
 MODEL:
-  NAME: DeepPacejka
-  HORIZON: 9
+  NAME: DeepDynamicsIAC
+  HORIZON: 7
   LAYERS:
     - GRU:
-      OUT_FEATURES: 81
-      LAYERS: 8
+      OUT_FEATURES: 49
+      LAYERS: 2
     - DENSE:
-      OUT_FEATURES: 175
+      OUT_FEATURES: 105
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 175 
+      OUT_FEATURES: 105
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 105
       ACTIVATION: Mish
     - DENSE:
       ACTIVATION: Softplus
@@ -40,4 +49,5 @@ MODEL:
     BATCH_SIZE: 4
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.1
+    LR: 0.0002
+    WEIGHT_DECAY: 0.00001
