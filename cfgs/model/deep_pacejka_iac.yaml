@@ -16,17 +16,17 @@ PARAMETERS:
   - Dr: 
   - Frx:
 VEHICLE_SPECS:
-  lf: 1.890
-  lr: 2.610
-  mass: 630.0
+  lf: 1.248
+  lr: 1.7328
+  mass: 790.0
   Iz: 1000.0
 MODEL:
   NAME: DeepPacejka
-  HORIZON: 14
+  HORIZON: 9
   LAYERS:
-    #- GRU:
-    #  OUT_FEATURES: 4
-    #  LAYERS: 8
+    - GRU:
+      OUT_FEATURES: 81
+      LAYERS: 8
     - DENSE:
       OUT_FEATURES: 175
       ACTIVATION: Mish
@@ -40,5 +40,4 @@ MODEL:
     BATCH_SIZE: 4
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0002
-    WEIGHT_DECAY: 0.00001
+    LR: 0.1

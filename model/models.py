@@ -23,6 +23,7 @@ class DeepDynamicsDataset(torch.utils.data.Dataset):
             min = np.min(dataset["features"][:,:,i])
             X_norm[:,:,i] = (dataset["features"][:,:,i] - min) / (max - min)
         self.X_norm = torch.from_numpy(X_norm).float().to(device)
+        
 
     def __len__(self):
         return(self.X_data.shape[0])
@@ -171,9 +172,31 @@ class DeepPacejkaModel(ModelBase):
         dxdt[:,2] = 1/self.vehicle_specs["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
         return x[:,-1,:3] + dxdt, np.array([sys_param_dict["Frx"], Ffy, Fry])
+    
+class DeepDynamicsModelIAC(ModelBase):
+    def __init__(self, param_dict, eval=False):
+        super().__init__(param_dict, eval)
+
+    def differential_equation(self, x, output, Ts):
+        sys_param_dict, _ = self.unpack_sys_params(output)
+        state_action_dict = self.unpack_state_actions(x)
+        steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
+        throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
+        alphaf = steering - torch.atan2(self.vehicle_specs["lf"]*state_action_dict["YAW_RATE"] + state_action_dict["VY"], torch.abs(state_action_dict["VX"]))
+        alphar = torch.atan2((self.vehicle_specs["lr"]*state_action_dict["YAW_RATE"] - state_action_dict["VY"]), torch.abs(state_action_dict["VX"]))
+        Frx = sys_param_dict["Cm1"]*throttle - sys_param_dict["Cr0"] - sys_param_dict["Cr2"]*(state_action_dict["VX"]**2)
+        Ffy = sys_param_dict["Ffz"] * sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf - sys_param_dict["Ef"] * (sys_param_dict["Bf"] * alphaf - torch.atan(sys_param_dict["Bf"] * alphaf))))
+        Fry = sys_param_dict["Frz"] * sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar - sys_param_dict["Er"] * (sys_param_dict["Br"] * alphar - torch.atan(sys_param_dict["Br"] * alphar))))
+        dxdt = torch.zeros(len(x), 3).to(device)
+        dxdt[:,0] = 1/sys_param_dict["mass"] * (Frx - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
+        dxdt[:,1] = 1/sys_param_dict["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
+        dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
+        dxdt *= Ts
+        return x[:,-1,:3] + dxdt, np.array([Frx, Ffy, Fry])
 
 
 string_to_model = {
     "DeepDynamics" : DeepDynamicsModel,
     "DeepPacejka" : DeepPacejkaModel,
+    "DeepDynamicsIAC" : DeepDynamicsModelIAC
 }

@@ -12,8 +12,10 @@ def write_dataset(csv_path, horizon):
         odometry = []
         throttle_cmds = []
         steering_cmds = []
+        gears = []
         is_column_names = True
-        previous_throttle = 0
+        previous_throttle = 0.0
+        previous_steer = 0.0
         started = False
         for row in csv_reader:
             if is_column_names:

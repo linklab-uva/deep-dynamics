@@ -1,6 +1,6 @@
 import wandb
 from ray.air import Checkpoint, session
-from models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel
+from models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel, DeepDynamicsModelIAC
 from models import string_to_model
 import torch
 import numpy as np
@@ -25,13 +25,9 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             gru_layers = 0
             hidden_layer_size = model.param_dict["MODEL"]["LAYERS"][0]["OUT_FEATURES"]
             hidden_layers = len(model.param_dict["MODEL"]["LAYERS"]) - 1
-        if type(model) is DeepDynamicsModel:
-            project = "deep_dynamics_iac"
-        elif type(model) is DeepPacejkaModel:
-            project = "deep_pacejka_iac"
         wandb.init(
             # set the wandb project where this run will be logged
-            project=project,
+            project=output_dir,
             name = experiment_name,
             
             # track hyperparameters and run metadata
