@@ -1,3 +1,5 @@
 __pycache__/
 *.pth
 *.csv
+build/
+*.egg-info
