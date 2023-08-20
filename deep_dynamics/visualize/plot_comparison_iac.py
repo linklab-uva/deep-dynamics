@@ -84,12 +84,40 @@ state_dict = "../output/deep_pacejka_iac/manual/epoch_321.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
-dataset_file = "../data/iac/LVMS_23_01_04_A_{}.npz".format(dpm.horizon)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
-data_npy = np.load(dataset_file)
-dpm_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
+features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
+samples = set(range(2500, len(features), 500))
+dpm_predictions = np.zeros((len(samples), 6, HORIZON))
+dpm_dataset = DeepDynamicsDataset(features, labels)
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
+global_idx = 0
+idt = 0
+for inputs, labels, norm_inputs in dpm_data_loader:
+	if global_idx in samples:
+		if dpm.is_rnn:
+			h = dpm.init_hidden(inputs.shape[0])
+			h = h.data
+		inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+		if dpm.is_rnn:
+			_, h, dpm_output, _ = dpm(inputs, norm_inputs, h)
+		else:
+			_, _, dpm_output, _ = dpm(inputs, norm_inputs)
+		# Simulate model
+		dpm_predictions[idt,:3,0] = poses[global_idx, :3]
+		dpm_predictions[idt,3:,0] = features[global_idx,-1,:3]
+		for idh in range(0, HORIZON-1):
+			dpm_predictions[idt,0,idh+1] = dpm_predictions[idt,0,idh] + (dpm_predictions[idt,3,idh]*np.cos(dpm_predictions[idt,2,idh]) - dpm_predictions[idt,4,idh]*np.sin(dpm_predictions[idt,2,idh])) * Ts
+			dpm_predictions[idt,1,idh+1] = dpm_predictions[idt,1,idh] + (dpm_predictions[idt,3,idh]*np.sin(dpm_predictions[idt,2,idh]) + dpm_predictions[idt,4,idh]*np.cos(dpm_predictions[idt,2,idh])) * Ts
+			dpm_predictions[idt,2,idh+1] = dpm_predictions[idt,2,idh] + dpm_predictions[idt,5,idh] * Ts
+			dpm_input = np.array([*dpm_predictions[idt,3:,idh], *features[global_idx+idh, -1, 3:]]).reshape(1,1,-1)
+			dxdt, _ = dpm.differential_equation(torch.from_numpy(dpm_input).to(device), dpm_output, Ts) 
+			dxdt = dxdt.cpu().detach().numpy()[-1]
+			dpm_predictions[idt,3,idh+1] = dxdt[0]
+			dpm_predictions[idt,4,idh+1] = dxdt[1]
+			dpm_predictions[idt,5,idh+1] = dxdt[2]
+		idt += 1
+	global_idx += 1
 
 #####################################################################
 # plots
@@ -103,9 +131,15 @@ plt.axis('equal')
 plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
 plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
 plt.plot(poses[2500:,0], poses[2500:,1], 'b', lw=1, label='Ground Truth')
+legend_initialized = False
 for idx in range(len(samples)):
-	plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go')
-	# plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
+	if not legend_initialized:
+		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
+		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
+		legend_initialized = True
+	else:
+		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go')
+	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
 plt.xlabel('$x$ [m]')
 plt.ylabel('$y$ [m]')
 plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
