@@ -2,8 +2,9 @@ import yaml
 import os
 from functools import partial
 import torch
-from models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
-from train import train
+import numpy as np
+from deep_dynamics.model.models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
+from deep_dynamics.model.train import train
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
@@ -49,7 +50,8 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     output_dir = "/u/jlc9wr/deep-dynamics/output/%s/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0], experiment_name)
     if not os.path.exists(output_dir):
             os.mkdir(output_dir)
-    dataset = DeepDynamicsDataset(dataset_file)
+    data_npy = np.load(dataset_file)
+    dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True)

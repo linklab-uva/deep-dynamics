@@ -1,4 +1,4 @@
-from models import DeepDynamicsDataset, string_to_model
+from deep_dynamics.model.models import DeepDynamicsDataset, string_to_model
 import torch
 import yaml
 import numpy as np
@@ -40,9 +40,9 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
                 h = h.data
             inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
             if model.is_rnn:
-                output, h, sysid = model(inputs, norm_inputs, h)
+                output, h, sysid, _ = model(inputs, norm_inputs, h)
             else:
-                output, _, sysid = model(inputs, norm_inputs)
+                output, _, sysid, _ = model(inputs, norm_inputs)
             # output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             test_losses.append(test_loss.cpu().detach().numpy())
@@ -82,7 +82,8 @@ if __name__ == "__main__":
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
     model.to(device)
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
-    test_dataset = DeepDynamicsDataset(argdict["dataset_file"])
+    data_npy = np.load(argdict["dataset_file"])
+    test_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
     losses = evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
     print(losses)

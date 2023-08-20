@@ -3,8 +3,8 @@ import os
 import wandb
 import torch
 import numpy as np
-from models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
-from evaluate import evaluate_predictions
+from deep_dynamics.model.models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
+from deep_dynamics.model.evaluate import evaluate_predictions
 import csv
 
 def numbers(x):
@@ -34,7 +34,8 @@ def test_hyperparams(model_cfg, output_csv, log_wandb):
         dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
-        test_dataset = DeepDynamicsDataset(dataset_file)
+        data_npy = np.load(dataset_file)
+        test_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
         output_layer = param_dict["MODEL"]["LAYERS"][-1]
         param_dict["MODEL"]["LAYERS"] = []
         if gru_layers:

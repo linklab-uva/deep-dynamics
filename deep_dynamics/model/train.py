@@ -1,7 +1,7 @@
 import wandb
 from ray.air import Checkpoint, session
-from models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel, DeepDynamicsModelIAC
-from models import string_to_model
+from deep_dynamics.model.models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel, DeepDynamicsModelIAC
+from deep_dynamics.model.models import string_to_model
 import torch
 import numpy as np
 import os
@@ -55,9 +55,9 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
                 h = h.data
             model.zero_grad()
             if model.is_rnn:
-                output, h, _ = model(inputs, norm_inputs, h)
+                output, h, _, _ = model(inputs, norm_inputs, h)
             else:
-                output, _, _ = model(inputs, norm_inputs)
+                output, _, _, _ = model(inputs, norm_inputs)
             loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             train_loss_accum += loss.item()
             train_steps += 1
@@ -72,9 +72,9 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             inp, lab, norm = inp.to(device), lab.to(device), norm.to(device)
             if model.is_rnn:
                 val_h = val_h.data
-                out, val_h, _ = model(inp, norm, val_h)
+                out, val_h, _, _ = model(inp, norm, val_h)
             else:
-                out, _, _ = model(inp, norm)
+                out, _, _, _ = model(inp, norm)
             val_loss = model.loss_function(out.squeeze(), lab.squeeze().float())
             val_loss_accum += val_loss.item()
             val_steps += 1
@@ -122,7 +122,8 @@ if __name__ == "__main__":
     with open(argdict["model_cfg"], 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
-    dataset = DeepDynamicsDataset(argdict["dataset"])
+    data_npy = np.load(argdict["dataset"])
+    dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
     if not os.path.exists("../output"):
         os.mkdir("../output")
     if not os.path.exists("../output/%s" % (os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0])):

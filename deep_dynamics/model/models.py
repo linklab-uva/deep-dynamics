@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from build_network import build_network, string_to_torch
+from deep_dynamics.model.build_network import build_network, string_to_torch
 import yaml
 import pickle
 import numpy as np
@@ -13,17 +13,15 @@ else:
     device = torch.device("cpu")
 
 class DeepDynamicsDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset_file):
-        dataset = np.load(dataset_file)
-        self.X_data = torch.from_numpy(dataset["features"]).float().to(device)
-        self.y_data = torch.from_numpy(dataset["labels"]).float().to(device)
-        X_norm = np.zeros(dataset["features"].shape)
+    def __init__(self, features, labels):
+        self.X_data = torch.from_numpy(features).float().to(device)
+        self.y_data = torch.from_numpy(labels).float().to(device)
+        X_norm = np.zeros(features.shape)
         for i in range(self.X_data.shape[-1]):
-            max = np.max(dataset["features"][:,:,i])
-            min = np.min(dataset["features"][:,:,i])
-            X_norm[:,:,i] = (dataset["features"][:,:,i] - min) / (max - min)
+            max = np.max(features[:,:,i])
+            min = np.min(features[:,:,i])
+            X_norm[:,:,i] = (features[:,:,i] - min) / (max - min)
         self.X_norm = torch.from_numpy(X_norm).float().to(device)
-        
 
     def __len__(self):
         return(self.X_data.shape[0])
@@ -70,12 +68,12 @@ class ModelBase(nn.Module):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
-                    if x_norm:
+                    if x_norm is not None:
                         ff, h0 = self.feed_forward[0](x_norm[:,:,:7], h0)
                     else:
                         ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
                 else:
-                    if x_norm:
+                    if x_norm is not None:
                         ff = self.feed_forward[i](torch.reshape(x_norm[:,:,:7], (len(x_norm), -1)))
                     else:
                         ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
@@ -150,7 +148,7 @@ class DeepDynamicsModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.array([Frx, Ffy, Fry])
+        return x[:,-1,:3] + dxdt, np.vstack([Frx.cpu().detach(), Ffy.cpu().detach, Fry.cpu().detach()])
 
 
 class DeepPacejkaModel(ModelBase):
@@ -171,7 +169,7 @@ class DeepPacejkaModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/self.vehicle_specs["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.array([sys_param_dict["Frx"], Ffy, Fry])
+        return x[:,-1,:3] + dxdt, np.vstack([sys_param_dict["Frx"].cpu().detach(), Ffy.cpu().detach(), Fry.cpu().detach()])
     
 class DeepDynamicsModelIAC(ModelBase):
     def __init__(self, param_dict, eval=False):

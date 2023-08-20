@@ -25,24 +25,24 @@ VEHICLE_SPECS:
   mass: 790.0
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 2
+  HORIZON: 1
   LAYERS:
     # - GRU:
     #   OUT_FEATURES: 196
     #   LAYERS: 3
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 51
-      ACTIVATION: Mish
+    # - DENSE:
+    #   OUT_FEATURES: 51
+    #   ACTIVATION: Mish
+    #   OUT_FEATURES: 51
+    #   ACTIVATION: Mish
+    # - DENSE:
+    #   OUT_FEATURES: 51
+    #   ACTIVATION: Mish
     - DENSE:
       ACTIVATION: Softplus
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 128
+    BATCH_SIZE: 64
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0001
+    LR: 0.2

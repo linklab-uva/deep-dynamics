@@ -17,7 +17,7 @@ from bayes_race.models import Dynamic
 from bayes_race.tracks import ETHZMobil, ETHZ
 from bayes_race.mpc.planner import ConstantSpeed
 from bayes_race.mpc.nmpc import setupNLP
-from models import string_to_model
+from deep_dynamics.model.models import string_to_model
 import torch
 import yaml
 
