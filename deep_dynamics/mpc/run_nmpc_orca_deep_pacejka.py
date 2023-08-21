@@ -19,7 +19,7 @@ from bayes_race.mpc.planner import ConstantSpeed
 from bayes_race.mpc.nmpc import setupNLP
 from bayes_race.pp import purePursuit
 
-from models import DeepDynamicsModel, string_to_model
+from deep_dynamics.model.models import DeepDynamicsModel, string_to_model
 import yaml
 import torch
 
@@ -161,14 +161,8 @@ for idt in range(n_steps-horizon):
 		for param in ddm.sys_params:
 			params[param] = ddm_output[idx]
 			idx += 1
-		params["Cm1"] = Cm1 + np.random.normal(scale=0.1*Cm1)
-		params["Cm2"] = Cm2 + np.random.normal(scale=0.1*Cm2)
-		params["Cr0"] = Cr0 + np.random.normal(scale=0.1*Cr0)
-		params["Cr2"] = Cr2 + np.random.normal(scale=0.1*Cr2)
-		params["Iz"] = Iz + np.random.normal(scale=0.1*Iz)
-		model = Dynamic(**params)
-
-
+		dpm_model = Dynamic(**params)
+		nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, dpm_model, track, track_cons=TRACK_CONS)
 		# planner based on BayesOpt
 		xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
 
@@ -178,7 +172,7 @@ for idt in range(n_steps-horizon):
 		upp = purePursuit(x0, LD, KP, track, params)
 		inputs[:,idt] = umpc[:,0]
 		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
-		ddm_forces[:,idt+1] = ddm_force
+		ddm_forces[:,idt+1] = np.squeeze(ddm_force, axis=1)
 	else:
 		start = tm.time()
 		upp = purePursuit(x0, LD, KP, track, params)
