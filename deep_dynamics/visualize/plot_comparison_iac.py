@@ -87,7 +87,7 @@ dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-samples = set(range(2500, len(features), 500))
+samples = list(range(2500, len(features), 500))
 dpm_predictions = np.zeros((len(samples), 6, HORIZON))
 dpm_dataset = DeepDynamicsDataset(features, labels)
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
@@ -126,25 +126,17 @@ font = {'family' : 'normal',
         'size'   : 22}
 matplotlib.rc('font', **font)
 plt.figure(figsize=(6,4))
-plt.xlim(-600, 600)
 plt.axis('equal')
-plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
-plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
-plt.plot(poses[2500:,0], poses[2500:,1], 'b', lw=1, label='Ground Truth')
-legend_initialized = False
 for idx in range(len(samples)):
-	if not legend_initialized:
-		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
-		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
-		legend_initialized = True
-	else:
-		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go')
-	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
-plt.xlabel('$x$ [m]')
-plt.ylabel('$y$ [m]')
-plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
-plt.title("MPC Prediction Comparison", fontweight="bold")
-
-
-
-plt.show()
+	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(poses[samples[idx]-500:samples[idx]+500,0], poses[samples[idx]-500:samples[idx]+500:,1], 'b', lw=1, label='Ground Truth')
+	plt.xlabel('$x$ [m]')
+	plt.ylabel('$y$ [m]')
+	plt.title("MPC Prediction Comparison", fontweight="bold")
+	plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
+	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
+	plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
+	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 20.0, np.max(ddm_predictions[idx,0,:]) + 20.0)
+	plt.ylim(np.min(ddm_predictions[idx,1,:]) - 20.0, np.max(ddm_predictions[idx,1,:]) + 20.0)
+	plt.show()
