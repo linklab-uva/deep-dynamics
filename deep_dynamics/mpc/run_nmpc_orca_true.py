@@ -50,8 +50,8 @@ model = Dynamic(**params)
 #####################################################################
 # load track
 
-TRACK_NAME = 'ETHZ'
-track = ETHZ(reference='optimal', longer=True)
+TRACK_NAME = 'ETHZMobil'
+track = ETHZMobil(reference='optimal', longer=True)
 SIM_TIME = 6.5
 
 #####################################################################
@@ -64,6 +64,7 @@ with open(param_file, 'rb') as f:
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 ddm.cuda()
 ddm.load_state_dict(torch.load(state_dict))
+ddm_model = Dynamic(**params)
 
 param_file = "../cfgs/model/deep_pacejka.yaml"
 state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
@@ -72,6 +73,7 @@ with open(param_file, 'rb') as f:
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
+dpm_model = Dynamic(**params)
 
 #####################################################################
 
@@ -89,7 +91,7 @@ horizon = HORIZON
 
 nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, model, track, track_cons=TRACK_CONS)
 
-#####################################################################
+########################################`#############################
 # closed-loop simulation
 
 # initialize
@@ -169,49 +171,46 @@ for idt in range(n_steps-horizon):
 	inputs[:,idt] = umpc[:,0]
 	print("iter: {}, cost: {:.5f}, time: {:.2f}".format(idt, fval, end-start))
 
-	if idt > ddm.horizon and idt > dpm.horizon:
-		ddm_predictions[idt,:,0] = x0
-		dpm_predictions[idt,:,0] = x0
-		ddm_horizon[:3,:ddm.horizon] = states[3:, idt-ddm.horizon+1:idt+1]
-		dpm_horizon[:3,:dpm.horizon] = states[3:, idt-dpm.horizon+1:idt+1]
-		ddm_horizon[3:,:ddm.horizon] = inputs[:, idt-ddm.horizon+1:idt+1]
-		dpm_horizon[3:,:dpm.horizon] = inputs[:, idt-dpm.horizon+1:idt+1]
-		ddm_horizon[3:,ddm.horizon:] = umpc
-		dpm_horizon[3:,dpm.horizon:] = umpc
-		for idh in range(horizon):
-			# if idt + idh > n_steps or idt + idh > n_steps:
-			# 	break
-			# Create DDM model
-			ddm_data = np.array([*ddm_horizon[:, idh:idh+ddm.horizon], *(ddm_horizon[3:,idh+1:idh+ddm.horizon+1] - ddm_horizon[3:,idh:idh+ddm.horizon])], dtype=np.float32)
-			ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
-			ddm_state, _ , ddm_output , ddm_force = ddm(ddm_data)
-			ddm_output = ddm_output.cpu().detach().numpy()[0]
-			ddm_state = ddm_state.cpu().detach().numpy()
-			ddm_forces[:,idt+1] = ddm_force
-			# Create DPM model
-			dpm_data = np.array([*dpm_horizon[:, idh:idh+dpm.horizon], *(dpm_horizon[3:,idh+1:idh+dpm.horizon+1] - dpm_horizon[3:,idh:idh+dpm.horizon])], dtype=np.float32)
-			dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
-			dpm_state, _ , dpm_output , dpm_force = dpm(dpm_data)
-			dpm_output = dpm_output.cpu().detach().numpy()[0]
-			dpm_state = dpm_state.cpu().detach().numpy()
-			dpm_forces[:,idt+1] = dpm_force
-			# Predict over horizon
-			ddm_predictions[idt,0,idh+1] = ddm_predictions[idt,0,idh] + (ddm_predictions[idt,3,idh]*np.cos(ddm_predictions[idt,2,idh]) - ddm_predictions[idt,4,idh]*np.sin(ddm_predictions[idt,2,idh])) * Ts
-			ddm_predictions[idt,1,idh+1] = ddm_predictions[idt,1,idh] + (ddm_predictions[idt,3,idh]*np.sin(ddm_predictions[idt,2,idh]) + ddm_predictions[idt,4,idh]*np.cos(ddm_predictions[idt,2,idh])) * Ts
-			ddm_predictions[idt,2,idh+1] = ddm_predictions[idt,2,idh] + ddm_predictions[idt,5,idh] * Ts
-			ddm_predictions[idt,3:,idh+1] = ddm_state
-			dpm_predictions[idt,0,idh+1] = dpm_predictions[idt,0,idh] + (dpm_predictions[idt,3,idh]*np.cos(dpm_predictions[idt,2,idh]) - dpm_predictions[idt,4,idh]*np.sin(dpm_predictions[idt,2,idh])) * Ts
-			dpm_predictions[idt,1,idh+1] = dpm_predictions[idt,1,idh] + (dpm_predictions[idt,3,idh]*np.sin(dpm_predictions[idt,2,idh]) + dpm_predictions[idt,4,idh]*np.cos(dpm_predictions[idt,2,idh])) * Ts
-			dpm_predictions[idt,2,idh+1] = dpm_predictions[idt,2,idh] + dpm_predictions[idt,5,idh] * Ts
-			dpm_predictions[idt,3:,idh+1] = dpm_state
-			ddm_horizon[:3,ddm.horizon+idh] = ddm_predictions[idt,3:,idh+1]
-			dpm_horizon[:3,dpm.horizon+idh] = dpm_predictions[idt,3:,idh+1]
-	
 	# update current position with numerical integration (exact model)
 	x_next, data_x = model.sim_continuous(states[:,idt], inputs[:,idt].reshape(-1,1), [0, Ts], data_x)
 	states[:,idt+1] = x_next[:,-1]
 	dstates[:,idt+1] = data_x
 	Ffy[idt+1], Frx[idt+1], Fry[idt+1] = model.calc_forces(data_x, inputs[:,idt])
+
+	if idt > ddm.horizon and idt > dpm.horizon:
+		ddm_predictions[idt,:,0] = x0
+		dpm_predictions[idt,:,0] = x0
+		# Create DDM model
+		ddm_data = np.array([*ddm_horizon[:, :ddm.horizon], *(ddm_horizon[3:,1:ddm.horizon+1] - ddm_horizon[3:,:ddm.horizon])], dtype=np.float32)
+		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
+		_, _ , ddm_output , ddm_force = ddm(ddm_data)
+		ddm_forces[:,idt+1] = np.squeeze(ddm_force, axis=1)
+		ddm_output = ddm_output.cpu().detach().numpy()[0]
+		idx = 0
+		for param in ddm.sys_params:
+			params[param] = ddm_output[idx]
+			idx += 1
+		ddm_model = Dynamic(**params)
+		# Create DPM model
+		dpm_data = np.array([*dpm_horizon[:, :dpm.horizon], *(dpm_horizon[3:,1:dpm.horizon+1] - dpm_horizon[3:,:dpm.horizon])], dtype=np.float32)
+		dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
+		_, _ , dpm_output , dpm_force = dpm(dpm_data)
+		dpm_forces[:,idt+1] = np.squeeze(dpm_force, axis=1)
+		dpm_output = dpm_output.cpu().detach().numpy()[0]
+		idx = 0
+		for param in dpm.sys_params:
+			params[param] = dpm_output[idx]
+			idx += 1
+		dpm_model = Dynamic(**params)
+		ddm_predictions[idt,:,0] = x0
+		dpm_predictions[idt,:,0] = x0
+		for idh in range(horizon):
+			# Predict over horizon
+			ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+			ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
+			dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+			dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
+		
 
 	# forward sim to predict over the horizon
 	hstates[:,0] = x0

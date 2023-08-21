@@ -148,7 +148,7 @@ class DeepDynamicsModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.vstack([Frx.cpu().detach(), Ffy.cpu().detach, Fry.cpu().detach()])
+        return x[:,-1,:3] + dxdt, np.vstack([Frx.cpu().detach(), Ffy.cpu().detach(), Fry.cpu().detach()])
 
 
 class DeepPacejkaModel(ModelBase):
