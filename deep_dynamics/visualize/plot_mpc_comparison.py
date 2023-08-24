@@ -49,7 +49,7 @@ font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
 matplotlib.rc('font', **font)
-plt.figure(figsize=(6,4))
+plt.figure(figsize=(12,8))
 plt.axis('equal')
 plt.plot(-track.y_outer, track.x_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(-track.y_inner, track.x_inner, 'k', lw=0.5, alpha=0.5)

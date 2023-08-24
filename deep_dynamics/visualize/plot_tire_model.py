@@ -19,7 +19,7 @@ alpha = np.linspace(-0.3, 0.3, 1000)
 
 Ffy = Df * np.sin(Cf * np.arctan(Bf * alpha))
 Fry = Dr * np.sin(Cr * np.arctan(Br * alpha))
-
+plt.figure(figsize=(12,8))
 plt.plot(alpha, Fry, label="Pacejka Model")
 plt.plot(alpha, Dr *Cr *Br * alpha, label="Linear Model")
 

@@ -125,15 +125,14 @@ font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
 matplotlib.rc('font', **font)
-plt.figure(figsize=(6,4))
-plt.axis('equal')
 for idx in range(len(samples)):
+	plt.figure(figsize=(12,8))
+	plt.axis('equal')
 	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
 	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
 	plt.plot(poses[samples[idx]-500:samples[idx]+500,0], poses[samples[idx]-500:samples[idx]+500:,1], 'b', lw=1, label='Ground Truth')
 	plt.xlabel('$x$ [m]')
 	plt.ylabel('$y$ [m]')
-	plt.title("MPC Prediction Comparison", fontweight="bold")
 	plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
 	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
 	plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)

@@ -1,10 +1,3 @@
-"""	Plot offline data.
-"""
-
-__author__ = 'Achin Jain'
-__email__ = 'achinj@seas.upenn.edu'
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
@@ -133,7 +126,7 @@ font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
 matplotlib.rc('font', **font)
-plt.figure(figsize=(6,4))
+plt.figure(figsize=(12,8))
 plt.axis('equal')
 plt.plot(track.x_outer, track.y_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(track.x_inner, track.y_inner, 'k', lw=0.5, alpha=0.5)
