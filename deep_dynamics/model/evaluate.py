@@ -29,7 +29,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
         test_losses = []
         predictions = []
         ground_truth = []
-
+        max_errors = [0.0, 0.0, 0.0]
         model.eval()
         model.to(device)
         if eval_coeffs:
@@ -45,12 +45,18 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
                 output, _, sysid, _ = model(inputs, norm_inputs)
             # output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.squeeze().float())
+            error = output.squeeze() - labels.squeeze().float()
+            error = error.cpu().detach().numpy()
+            for i in range(3):
+                if error[i] > max_errors[i]:
+                    max_errors[i] = error[i]
             test_losses.append(test_loss.cpu().detach().numpy())
             predictions.append(output.squeeze())
             ground_truth.append(labels.cpu())
             if eval_coeffs:
                  sys_params.append(sysid.cpu().detach().numpy())
-        print("Loss:", np.mean(test_losses, axis=0))
+        print("RMSE:", np.sqrt(np.mean(test_losses, axis=0)))
+        print("Maximum Error:", max_errors)
         if eval_coeffs:
             means, _ = model.unpack_sys_params(np.mean(sys_params, axis=0))
             std_dev, _ = model.unpack_sys_params(np.std(sys_params, axis=0))
