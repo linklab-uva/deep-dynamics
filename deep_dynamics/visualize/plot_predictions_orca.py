@@ -8,6 +8,7 @@ from bayes_race.models import Dynamic
 from bayes_race.params import ORCA
 import torch
 import yaml
+from tqdm import tqdm
 from deep_dynamics.model.models import string_to_model, DeepDynamicsDataset
 from deep_dynamics.tools.bayesrace_parser import write_dataset
 
@@ -46,37 +47,46 @@ ddm.eval()
 ddm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, ddm.horizon, save=False)
 samples = list(range(50, 300, 50))
-ddm_predictions = np.zeros((len(samples), 6, HORIZON))
 ddm_dataset = DeepDynamicsDataset(features, labels)
+ddm_predictions = np.zeros((len(ddm_dataset) - HORIZON, 6, HORIZON+1))
 ddm_data_loader = torch.utils.data.DataLoader(ddm_dataset, batch_size=1, shuffle=False)
 params = ORCA(control='pwm')
 ddm_model = Dynamic(**params)
-global_idx = 0
 idt = 0
-for inputs, labels, norm_inputs in ddm_data_loader:
-	if global_idx in samples:
-		if ddm.is_rnn:
-			h = ddm.init_hidden(inputs.shape[0])
-			h = h.data
-		inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
-		if ddm.is_rnn:
-			_, h, ddm_output, _ = ddm(inputs, None, h)
-		else:
-			_, _, ddm_output, _ = ddm(inputs, None)
-		# Simulate model
-		ddm_output = ddm_output.cpu().detach().numpy()[0]
-		idx = 0
-		for param in ddm.sys_params:
-			params[param] = ddm_output[idx]
-			idx += 1
-		ddm_model = Dynamic(**params)
-		ddm_predictions[idt,:,0] = poses[global_idx, :]
-		for idh in range(HORIZON-1):
-			# Predict over horizon
-			ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], features[global_idx+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
-			ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
-		idt += 1
-	global_idx += 1
+average_displacement_error = 0.0
+final_displacement_error = 0.0
+for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictions)):
+	if idt == len(ddm_predictions):
+		break
+	if ddm.is_rnn:
+		h = ddm.init_hidden(inputs.shape[0])
+		h = h.data
+	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+	if ddm.is_rnn:
+		_, h, ddm_output, _ = ddm(inputs, None, h)
+	else:
+		_, _, ddm_output, _ = ddm(inputs, None)
+	# Simulate model
+	ddm_output = ddm_output.cpu().detach().numpy()[0]
+	idx = 0
+	for param in ddm.sys_params:
+		params[param] = ddm_output[idx]
+		idx += 1
+	ddm_model = Dynamic(**params)
+	ddm_predictions[idt,:,0] = poses[idt, :]
+	displacement_error = 0.0
+	for idh in range(HORIZON):
+		# Predict over horizon
+		ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], features[idt+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
+		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	average_displacement_error += displacement_error / HORIZON
+	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	idt += 1
+average_displacement_error /= len(ddm_predictions)
+final_displacement_error /= len(ddm_predictions)
+print("DDM Average Displacement Error:", average_displacement_error)
+print("DDM Final Displacement Error:", final_displacement_error)
 
 	
 
@@ -88,37 +98,46 @@ dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-dpm_predictions = np.zeros((len(samples), 6, HORIZON))
 dpm_dataset = DeepDynamicsDataset(features, labels)
+dpm_predictions = np.zeros((len(dpm_dataset) - HORIZON, 6, HORIZON+1))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
 params = ORCA(control='pwm')
 dpm_model = Dynamic(**params)
-global_idx = 0
 idt = 0
-for inputs, labels, norm_inputs in dpm_data_loader:
-	if global_idx in samples:
-		if dpm.is_rnn:
-			h = dpm.init_hidden(inputs.shape[0])
-			h = h.data
-		inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
-		if dpm.is_rnn:
-			_, h, dpm_output, _ = dpm(inputs, None, h)
-		else:
-			_, _, dpm_output, _ = dpm(inputs, None)
-		# Simulate model
-		dpm_output = dpm_output.cpu().detach().numpy()[0]
-		idx = 0
-		for param in dpm.sys_params:
-			params[param] = dpm_output[idx]
-			idx += 1
-		dpm_model = Dynamic(**params)
-		dpm_predictions[idt,:,0] = poses[global_idx, :]
-		for idh in range(HORIZON-1):
-			# Predict over horizon
-			dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], features[global_idx+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
-			dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		idt += 1
-	global_idx += 1
+average_displacement_error = 0.0
+final_displacement_error = 0.0
+for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictions)):
+	if idt == len(dpm_predictions):
+		break
+	if dpm.is_rnn:
+		h = dpm.init_hidden(inputs.shape[0])
+		h = h.data
+	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+	if dpm.is_rnn:
+		_, h, dpm_output, _ = dpm(inputs, None, h)
+	else:
+		_, _, dpm_output, _ = dpm(inputs, None)
+	# Simulate model
+	dpm_output = dpm_output.cpu().detach().numpy()[0]
+	idx = 0
+	for param in dpm.sys_params:
+		params[param] = dpm_output[idx]
+		idx += 1
+	dpm_model = Dynamic(**params)
+	dpm_predictions[idt,:,0] = poses[idt, :]
+	displacement_error = 0.0
+	for idh in range(HORIZON):
+		# Predict over horizon
+		dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], features[idt+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
+		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	average_displacement_error += displacement_error / HORIZON
+	final_displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	idt += 1
+average_displacement_error /= len(ddm_predictions)
+final_displacement_error /= len(ddm_predictions)
+print("DPM Average Displacement Error:", average_displacement_error)
+print("DPM Final Displacement Error:", final_displacement_error)
 
 #####################################################################
 # plots
@@ -132,7 +151,7 @@ plt.plot(track.x_outer, track.y_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(track.x_inner, track.y_inner, 'k', lw=0.5, alpha=0.5)
 plt.plot(poses[:300,0], poses[:300,1], 'b', lw=1, label='Ground Truth')
 legend_initialized = False
-for idx in range(len(samples)):
+for idx in samples:
 	if not legend_initialized:
 		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
