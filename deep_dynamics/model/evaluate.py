@@ -46,7 +46,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
             # output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             error = output.squeeze() - labels.squeeze().float()
-            error = error.cpu().detach().numpy()
+            error = np.abs(error.cpu().detach().numpy())
             for i in range(3):
                 if error[i] > max_errors[i]:
                     max_errors[i] = error[i]
