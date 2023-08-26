@@ -74,8 +74,7 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     param_dict["MODEL"]["OPTIMIZATION"]["LR"] = hyperparam_config["lr"]
     param_dict["MODEL"]["HORIZON"] = hyperparam_config["horizon"]
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
-    train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, use_ray_tune=True)
-
+    train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, os.path.basename(os.path.normpath(model_cfg)).split('.')[0], use_ray_tune=True)
 if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")

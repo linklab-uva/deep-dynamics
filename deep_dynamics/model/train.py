@@ -12,7 +12,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, use_ray_tune=False):
+def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, project_name=None, use_ray_tune=False):
     print("Starting experiment: {}".format(experiment_name))
     if log_wandb:
         if model.is_rnn:
@@ -27,7 +27,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             hidden_layers = len(model.param_dict["MODEL"]["LAYERS"]) - 1
         wandb.init(
             # set the wandb project where this run will be logged
-            project=output_dir,
+            project=project_name,
             name = experiment_name,
             
             # track hyperparameters and run metadata
