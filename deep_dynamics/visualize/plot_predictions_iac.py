@@ -36,8 +36,8 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics_iac.yaml"
-state_dict = "../output/deep_dynamics_iac/manual/epoch_192.pth"
-dataset_file = "../data/iac/LVMS_23_01_04_A.csv"
+state_dict = "../output/deep_dynamics_iac/manual/epoch_291.pth"
+dataset_file = "../data/LVMS_23_01_04_A.csv"
 
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
@@ -88,7 +88,7 @@ print("DDM Average Displacement Error:", average_displacement_error)
 print("DDM Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/manual/epoch_321.pth"
+state_dict = "../output/deep_pacejka_iac/manual/epoch_262.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -148,12 +148,13 @@ for idx in samples:
 	plt.axis('equal')
 	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
 	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
-	plt.plot(poses[idx-500:idx+500,0], poses[idx-500:idx+500:,1], 'b', lw=1, label='Ground Truth')
+	plt.plot(poses[idx-500:idx+500,0], poses[idx-500:idx+500:,1], 'b', lw=1)
+	plt.plot(poses[idx:idx+HORIZON+1,0], poses[idx:idx+HORIZON+1,1], '--bo', lw=1, label='Ground Truth')
 	plt.xlabel('$x$ [m]')
 	plt.ylabel('$y$ [m]')
 	plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
 	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
 	plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
-	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 20.0, np.max(ddm_predictions[idx,0,:]) + 20.0)
-	plt.ylim(np.min(ddm_predictions[idx,1,:]) - 20.0, np.max(ddm_predictions[idx,1,:]) + 20.0)
+	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 10.0, np.max(ddm_predictions[idx,0,:]) + 10.0)
+	plt.ylim(np.min(ddm_predictions[idx,1,:]) - 10.0, np.max(ddm_predictions[idx,1,:]) + 10.0)
 	plt.show()

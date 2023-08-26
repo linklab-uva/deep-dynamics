@@ -48,6 +48,7 @@ ddm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, ddm.horizon, save=False)
 samples = list(range(50, 300, 50))
 ddm_dataset = DeepDynamicsDataset(features, labels)
+print(len(features))
 ddm_predictions = np.zeros((len(ddm_dataset) - HORIZON, 6, HORIZON+1))
 ddm_data_loader = torch.utils.data.DataLoader(ddm_dataset, batch_size=1, shuffle=False)
 params = ORCA(control='pwm')
@@ -91,7 +92,7 @@ print("DDM Final Displacement Error:", final_displacement_error)
 	
 
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru//epoch_357.pth"
+state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -149,14 +150,16 @@ plt.figure(figsize=(12,8))
 plt.axis('equal')
 plt.plot(track.x_outer, track.y_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(track.x_inner, track.y_inner, 'k', lw=0.5, alpha=0.5)
-plt.plot(poses[:300,0], poses[:300,1], 'b', lw=1, label='Ground Truth')
+plt.plot(poses[:300,0], poses[:300,1], 'b', lw=1)
 legend_initialized = False
 for idx in samples:
 	if not legend_initialized:
+		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo', label='Ground Truth')
 		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
 		legend_initialized = True
 	else:
+		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo')
 		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go')
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
 
