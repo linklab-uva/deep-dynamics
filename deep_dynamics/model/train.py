@@ -41,9 +41,11 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             "gru_layers": gru_layers
             }
         )
+        wandb.watch(model, log='all')
     valid_loss_min = torch.inf
     model.train()
     model.cuda()
+    weights = [1.0, 10.0, 1.0]
     for i in range(model.epochs):
         train_steps = 0
         train_loss_accum = 0.0
@@ -53,15 +55,21 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
             if model.is_rnn:
                 h = h.data
-            model.zero_grad()
+            model.optimizer.zero_grad()
             if model.is_rnn:
                 output, h, _, _ = model(inputs, norm_inputs, h)
             else:
                 output, _, _, _ = model(inputs, norm_inputs)
-            loss = model.loss_function(output.squeeze(), labels.squeeze().float())
-            train_loss_accum += loss.item()
-            train_steps += 1
+            loss = 0.0
+            for j in range(3):
+                loss += weights[j] * model.loss_function(output.squeeze()[:,j], labels.squeeze()[:,j].float())
+            # loss_y = 100 * model.loss_function(output.squeeze()[1], labels.squeeze()[1].float())
+            # loss_z = 200 * model.loss_function(output.squeeze()[2], labels.squeeze()[2].float())
+            # loss_x.backward(retain_graph=True)
+            # loss_y.backward(retain_graph=True)
             loss.backward()
+            train_loss_accum += loss.item()#loss_x.item() + loss_y.item() + loss_z.item()
+            train_steps += 1
             model.optimizer.step()
         model.eval()
         for inp, lab, norm in val_data_loader:
@@ -75,7 +83,13 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
                 out, val_h, _, _ = model(inp, norm, val_h)
             else:
                 out, _, _, _ = model(inp, norm)
-            val_loss = model.loss_function(out.squeeze(), lab.squeeze().float())
+            val_loss = 0.0
+            for j in range(3):
+                val_loss += weights[j] * model.loss_function(out.squeeze()[:,j], lab.squeeze()[:,j].float())
+            # loss_x = model.loss_function(out.squeeze()[0], lab.squeeze()[0].float())
+            # loss_y = 100 * model.loss_function(out.squeeze()[1], lab.squeeze()[1].float())
+            # loss_z = 200 * model.loss_function(out.squeeze()[2], lab.squeeze()[2].float())
+            # val_loss_accum += loss_x.item() + loss_y.item() + loss_z.item()
             val_loss_accum += val_loss.item()
             val_steps += 1
         mean_train_loss = train_loss_accum / train_steps
@@ -83,7 +97,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
         if log_wandb:
             wandb.log({"train_loss": mean_train_loss })
             wandb.log({"val_loss": mean_val_loss})
-        if mean_val_loss <= valid_loss_min:
+        if mean_val_loss < valid_loss_min:
             torch.save(model.state_dict(), "%s/epoch_%s.pth" % (output_dir, i+1))
             print('Validation loss decreased ({:.6f} --> {:.6f}).  Saving model ...'.format(valid_loss_min,mean_val_loss))
             valid_loss_min = mean_val_loss
@@ -101,7 +115,7 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
             checkpoint = Checkpoint.from_dict(checkpoint_data)
             _val_loss = np.inf
             session.report(
-                {"loss": mean_val_loss},
+                {"loss": mean_train_loss},
                 checkpoint=checkpoint,
             )
         if np.isnan(mean_val_loss):
@@ -135,8 +149,8 @@ if __name__ == "__main__":
          print("Experiment already exists. Choose a different name")
          exit(0)
     train_dataset, val_dataset = dataset.split(0.85)
-    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, drop_last=True)
-    val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=True)
+    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=False, drop_last=True)
+    val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=False)
     train(model, train_data_loader, val_data_loader, argdict["experiment_name"], argdict["log_wandb"], output_dir)
         
 
