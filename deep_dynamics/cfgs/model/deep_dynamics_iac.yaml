@@ -8,12 +8,24 @@ ACTIONS:
   - THROTTLE_CMD
   - STEERING_CMD
 PARAMETERS:
-  - Bf: 
-  - Cf: 
-  - Df: 
-  - Br: 
-  - Cr: 
-  - Dr: 
+  - Bf:
+    Min: 1.0
+    Max: 12.0
+  - Cf:
+    Min: 1.0
+    Max: 2.0
+  - Df:
+    Min: 0.1
+    Max: 1.9
+  - Br:
+    Min: 1.0
+    Max: 12.0
+  - Cr:
+    Min: 1.0
+    Max: 2.0
+  - Dr:
+    Min: 0.1
+    Max: 0.9 
   - Cm1: 
   - Cm2: 
   - Cr0: 
@@ -25,24 +37,23 @@ VEHICLE_SPECS:
   mass: 790.0
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 1
+  HORIZON: 5
   LAYERS:
-    # - GRU:
-    #   OUT_FEATURES: 196
-    #   LAYERS: 3
-    # - DENSE:
-    #   OUT_FEATURES: 51
-    #   ACTIVATION: Mish
-    #   OUT_FEATURES: 51
-    #   ACTIVATION: Mish
-    # - DENSE:
-    #   OUT_FEATURES: 51
-    #   ACTIVATION: Mish
+    - GRU:
+      OUT_FEATURES: 25
+      LAYERS: 3
     - DENSE:
-      ACTIVATION: Softplus
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 51
+      ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 64
+    BATCH_SIZE: 4
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.2
+    LR: 0.0006

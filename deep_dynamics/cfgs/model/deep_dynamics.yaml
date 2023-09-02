@@ -9,11 +9,23 @@ ACTIONS:
   - STEERING_CMD
 PARAMETERS:
   - Bf: 2.579
+    Min: 1.0
+    Max: 12.0
   - Cf: 1.2
+    Min: 1.0
+    Max: 2.0
   - Df: 0.192
+    Min: 0.1
+    Max: 1.9
   - Br: 3.3852
+    Min: 1.0
+    Max: 12.0
   - Cr: 1.2691
+    Min: 1.0
+    Max: 2.0
   - Dr: 0.1737
+    Min: 0.1
+    Max: 0.9
   - Cm1: 0.287
   - Cm2: 0.0545
   - Cr0: 0.0518
@@ -69,8 +81,6 @@ MODEL:
     - DENSE:
       OUT_FEATURES: 108
       ACTIVATION: Mish
-    - DENSE:
-      ACTIVATION: Softplus
   OPTIMIZATION:
     LOSS: MSE
     BATCH_SIZE: 4

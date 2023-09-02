@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from deep_dynamics.model.build_network import build_network, string_to_torch
+from build_network import build_network, string_to_torch, create_module
 import yaml
 import pickle
 import numpy as np
@@ -16,38 +16,30 @@ class DeepDynamicsDataset(torch.utils.data.Dataset):
     def __init__(self, features, labels):
         self.X_data = torch.from_numpy(features).float().to(device)
         self.y_data = torch.from_numpy(labels).float().to(device)
-        X_norm = np.zeros(features.shape)
-        for i in range(self.X_data.shape[-1]):
-            max = np.max(features[:,:,i])
-            min = np.min(features[:,:,i])
-            X_norm[:,:,i] = (features[:,:,i] - min) / (max - min)
-        self.X_norm = torch.from_numpy(X_norm).float().to(device)
-
     def __len__(self):
         return(self.X_data.shape[0])
     def __getitem__(self, idx):
         x = self.X_data[idx]
         y = self.y_data[idx]
-        x_norm = self.X_norm[idx]
-        return x, y, x_norm
+        return x, y
     def split(self, percent):
         split_id = int(len(self)* 0.8)
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
 
 class ModelBase(nn.Module):
-    def __init__(self, param_dict, eval=False):
+    def __init__(self, param_dict, output_module, eval=False):
         super().__init__()
         self.param_dict = param_dict
         layers = build_network(self.param_dict)
         self.batch_size = self.param_dict["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"]
-        self.horizon =  self.param_dict["MODEL"]["HORIZON"]
         if self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS"):
             self.is_rnn = True
             self.rnn_n_layers = self.param_dict["MODEL"]["LAYERS"][0].get("LAYERS")
-            self.rnn_hiden_dim = self.horizon
+            self.rnn_hiden_dim = self.param_dict["MODEL"]["HORIZON"]
             layers.insert(1, nn.Flatten())
         else:
             self.is_rnn = False
+        layers.extend(output_module)
         self.feed_forward = nn.ModuleList(layers)
         if eval:
             self.loss_function = string_to_torch[self.param_dict["MODEL"]["OPTIMIZATION"]["LOSS"]](reduction='none')
@@ -59,33 +51,27 @@ class ModelBase(nn.Module):
         self.actions = list(self.param_dict["ACTIONS"])
         self.sys_params = list([*(list(p.keys())[0] for p in self.param_dict["PARAMETERS"])])
         self.vehicle_specs = self.param_dict["VEHICLE_SPECS"]
-    
+
     @abstractmethod
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, x_norm=None, h0=None, Ts=0.04):
+    def forward(self, x, h0=None, Ts=0.02):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
-                    if x_norm is not None:
-                        ff, h0 = self.feed_forward[0](x_norm[:,:,:7], h0)
-                    else:
-                        ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
+                    ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
                 else:
-                    if x_norm is not None:
-                        ff = self.feed_forward[i](torch.reshape(x_norm[:,:,:7], (len(x_norm), -1)))
-                    else:
-                        ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
+                    ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
             else:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
                     ff, h0 = self.feed_forward[0](ff, h0)
                 else:
                     ff = self.feed_forward[i](ff)
-        o, forces = self.differential_equation(x, ff, Ts)
-        return o, h0, ff, forces
+        o = self.differential_equation(x, ff, Ts)
+        return o, h0, ff
     
-    def test_sys_params(self, x, Ts=0.04):
+    def test_sys_params(self, x, Ts=0.02):
         _, sys_param_dict = self.unpack_sys_params(torch.zeros((1, len(self.sys_params))))
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
@@ -131,7 +117,32 @@ class ModelBase(nn.Module):
     
 class DeepDynamicsModel(ModelBase):
     def __init__(self, param_dict, eval=False):
-        super().__init__(param_dict, eval)
+
+        class OutputModule(nn.Module):
+            def __init__(self, param_dict):
+                super().__init__()
+                pacejka_output = create_module("DENSE", param_dict["MODEL"]["LAYERS"][-1]["OUT_FEATURES"], param_dict["MODEL"]["HORIZON"], 6, activation="Sigmoid")
+                self.pacejka_dense = pacejka_output[0]
+                self.pacejka_activation = pacejka_output[1]
+                drivetrain_output = create_module("DENSE", param_dict["MODEL"]["LAYERS"][-1]["OUT_FEATURES"], param_dict["MODEL"]["HORIZON"], len(param_dict["PARAMETERS"]) - 6, activation="Softplus")
+                self.drivetrain_dense = drivetrain_output[0]
+                self.drivetrain_activation = drivetrain_output[1]
+                self.pacejka_ranges = torch.zeros(6).to(device)
+                self.pacejka_mins = torch.zeros(6).to(device)
+                for i in range(6):
+                    self.pacejka_ranges[i] = param_dict["PARAMETERS"][i]["Max"]- param_dict["PARAMETERS"][i]["Min"]
+                    self.pacejka_mins[i] = param_dict["PARAMETERS"][i]["Min"]
+
+            def forward(self, x):
+                pacejka_output = self.pacejka_dense(x)
+                pacejka_output = self.pacejka_activation(pacejka_output) * self.pacejka_ranges + self.pacejka_mins
+                drivetrain_output = self.drivetrain_dense(x)
+                drivetrain_output = self.drivetrain_activation(drivetrain_output)
+                return torch.cat((pacejka_output, drivetrain_output), 1)
+
+
+        
+        super().__init__(param_dict, [OutputModule(param_dict)], eval)
 
     def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
@@ -148,12 +159,13 @@ class DeepDynamicsModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.vstack([Frx.cpu().detach(), Ffy.cpu().detach(), Fry.cpu().detach()])
+        return x[:,-1,:3] + dxdt
 
 
 class DeepPacejkaModel(ModelBase):
     def __init__(self, param_dict, eval=False):
-        super().__init__(param_dict, eval)
+        output_module = create_module("DENSE", param_dict["MODEL"]["LAYERS"][-1]["OUT_FEATURES"], param_dict["MODEL"]["HORIZON"], len(param_dict["PARAMETERS"]), activation="Softplus")
+        super().__init__(param_dict, output_module, eval)
 
     def differential_equation(self, x, output, Ts):
         sys_param_dict, _ = self.unpack_sys_params(output)
@@ -169,32 +181,10 @@ class DeepPacejkaModel(ModelBase):
         dxdt[:,1] = 1/self.vehicle_specs["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
         dxdt[:,2] = 1/self.vehicle_specs["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
         dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.vstack([sys_param_dict["Frx"].cpu().detach(), Ffy.cpu().detach(), Fry.cpu().detach()])
-    
-class DeepDynamicsModelIAC(ModelBase):
-    def __init__(self, param_dict, eval=False):
-        super().__init__(param_dict, eval)
-
-    def differential_equation(self, x, output, Ts):
-        sys_param_dict, _ = self.unpack_sys_params(output)
-        state_action_dict = self.unpack_state_actions(x)
-        steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
-        throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
-        alphaf = steering - torch.atan2(self.vehicle_specs["lf"]*state_action_dict["YAW_RATE"] + state_action_dict["VY"], torch.abs(state_action_dict["VX"]))
-        alphar = torch.atan2((self.vehicle_specs["lr"]*state_action_dict["YAW_RATE"] - state_action_dict["VY"]), torch.abs(state_action_dict["VX"]))
-        Frx = sys_param_dict["Cm1"]*throttle - sys_param_dict["Cr0"] - sys_param_dict["Cr2"]*(state_action_dict["VX"]**2)
-        Ffy = sys_param_dict["Ffz"] * sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf - sys_param_dict["Ef"] * (sys_param_dict["Bf"] * alphaf - torch.atan(sys_param_dict["Bf"] * alphaf))))
-        Fry = sys_param_dict["Frz"] * sys_param_dict["Dr"] * torch.sin(sys_param_dict["Cr"] * torch.atan(sys_param_dict["Br"] * alphar - sys_param_dict["Er"] * (sys_param_dict["Br"] * alphar - torch.atan(sys_param_dict["Br"] * alphar))))
-        dxdt = torch.zeros(len(x), 3).to(device)
-        dxdt[:,0] = 1/sys_param_dict["mass"] * (Frx - Ffy*torch.sin(steering)) + state_action_dict["VY"]*state_action_dict["YAW_RATE"]
-        dxdt[:,1] = 1/sys_param_dict["mass"] * (Fry + Ffy*torch.cos(steering)) - state_action_dict["VX"]*state_action_dict["YAW_RATE"]
-        dxdt[:,2] = 1/sys_param_dict["Iz"] * (Ffy*self.vehicle_specs["lf"]*torch.cos(steering) - Fry*self.vehicle_specs["lr"])
-        dxdt *= Ts
-        return x[:,-1,:3] + dxdt, np.array([Frx, Ffy, Fry])
+        return x[:,-1,:3] + dxdt
 
 
 string_to_model = {
     "DeepDynamics" : DeepDynamicsModel,
     "DeepPacejka" : DeepPacejkaModel,
-    "DeepDynamicsIAC" : DeepDynamicsModelIAC
 }

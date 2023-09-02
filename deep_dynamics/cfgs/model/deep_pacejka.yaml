@@ -54,8 +54,6 @@ MODEL:
     - DENSE:
       OUT_FEATURES: 40
       ACTIVATION: Mish
-    - DENSE:
-      ACTIVATION: Softplus
   OPTIMIZATION:
     LOSS: MSE
     BATCH_SIZE: 4

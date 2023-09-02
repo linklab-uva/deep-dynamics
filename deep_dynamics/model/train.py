@@ -1,6 +1,6 @@
 import wandb
 from ray.air import Checkpoint, session
-from deep_dynamics.model.models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel, DeepDynamicsModelIAC
+from deep_dynamics.model.models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel
 from deep_dynamics.model.models import string_to_model
 import torch
 import numpy as np
@@ -45,51 +45,43 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
     valid_loss_min = torch.inf
     model.train()
     model.cuda()
-    weights = [1.0, 10.0, 1.0]
+    weights = [1.0, 1.0, 1.0]
     for i in range(model.epochs):
         train_steps = 0
         train_loss_accum = 0.0
         if model.is_rnn:
             h = model.init_hidden(model.batch_size)
-        for inputs, labels, norm_inputs in train_data_loader:
-            inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+        for inputs, labels in train_data_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
             if model.is_rnn:
                 h = h.data
-            model.optimizer.zero_grad()
+            model.zero_grad()
             if model.is_rnn:
-                output, h, _, _ = model(inputs, norm_inputs, h)
+                output, h, _ = model(inputs, h)
             else:
-                output, _, _, _ = model(inputs, norm_inputs)
+                output, _, _ = model(inputs)
             loss = 0.0
             for j in range(3):
                 loss += weights[j] * model.loss_function(output.squeeze()[:,j], labels.squeeze()[:,j].float())
-            # loss_y = 100 * model.loss_function(output.squeeze()[1], labels.squeeze()[1].float())
-            # loss_z = 200 * model.loss_function(output.squeeze()[2], labels.squeeze()[2].float())
-            # loss_x.backward(retain_graph=True)
-            # loss_y.backward(retain_graph=True)
-            loss.backward()
-            train_loss_accum += loss.item()#loss_x.item() + loss_y.item() + loss_z.item()
+            train_loss_accum += loss.item()
             train_steps += 1
+            loss.backward()
             model.optimizer.step()
         model.eval()
-        for inp, lab, norm in val_data_loader:
-            val_steps = 0
-            val_loss_accum = 0.0
+        val_steps = 0
+        val_loss_accum = 0.0
+        for inp, lab in val_data_loader:
             if model.is_rnn:
                 val_h = model.init_hidden(inp.shape[0])
-            inp, lab, norm = inp.to(device), lab.to(device), norm.to(device)
+            inp, lab = inp.to(device), lab.to(device)
             if model.is_rnn:
                 val_h = val_h.data
-                out, val_h, _, _ = model(inp, norm, val_h)
+                out, val_h, _ = model(inp, val_h)
             else:
-                out, _, _, _ = model(inp, norm)
+                out, _, _ = model(inp)
             val_loss = 0.0
             for j in range(3):
                 val_loss += weights[j] * model.loss_function(out.squeeze()[:,j], lab.squeeze()[:,j].float())
-            # loss_x = model.loss_function(out.squeeze()[0], lab.squeeze()[0].float())
-            # loss_y = 100 * model.loss_function(out.squeeze()[1], lab.squeeze()[1].float())
-            # loss_z = 200 * model.loss_function(out.squeeze()[2], lab.squeeze()[2].float())
-            # val_loss_accum += loss_x.item() + loss_y.item() + loss_z.item()
             val_loss_accum += val_loss.item()
             val_steps += 1
         mean_train_loss = train_loss_accum / train_steps
@@ -149,7 +141,7 @@ if __name__ == "__main__":
          print("Experiment already exists. Choose a different name")
          exit(0)
     train_dataset, val_dataset = dataset.split(0.85)
-    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=False, drop_last=True)
+    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=False)
     train(model, train_data_loader, val_data_loader, argdict["experiment_name"], argdict["log_wandb"], output_dir)
         
