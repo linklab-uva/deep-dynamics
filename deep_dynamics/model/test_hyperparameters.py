@@ -3,7 +3,7 @@ import os
 import wandb
 import torch
 import numpy as np
-from deep_dynamics.model.models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
+from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.evaluate import evaluate_predictions
 import csv
 
@@ -35,7 +35,7 @@ def test_hyperparams(model_cfg, output_csv, log_wandb):
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         data_npy = np.load(dataset_file)
-        test_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
+        test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"])
         output_layer = param_dict["MODEL"]["LAYERS"][-1]
         param_dict["MODEL"]["LAYERS"] = []
         if gru_layers:

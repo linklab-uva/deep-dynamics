@@ -1,7 +1,7 @@
 import wandb
 from ray.air import Checkpoint, session
 from deep_dynamics.model.models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel
-from deep_dynamics.model.models import string_to_model
+from deep_dynamics.model.models import string_to_model, string_to_dataset
 import torch
 import numpy as np
 import os
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     data_npy = np.load(argdict["dataset"])
-    dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
+    dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"])
     if not os.path.exists("../output"):
         os.mkdir("../output")
     if not os.path.exists("../output/%s" % (os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0])):

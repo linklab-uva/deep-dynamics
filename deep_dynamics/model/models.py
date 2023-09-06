@@ -12,7 +12,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-class DeepDynamicsDataset(torch.utils.data.Dataset):
+class DatasetBase(torch.utils.data.Dataset):
     def __init__(self, features, labels):
         self.X_data = torch.from_numpy(features).float().to(device)
         self.y_data = torch.from_numpy(labels).float().to(device)
@@ -25,6 +25,16 @@ class DeepDynamicsDataset(torch.utils.data.Dataset):
     def split(self, percent):
         split_id = int(len(self)* 0.8)
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
+
+class DeepDynamicsDataset(DatasetBase):
+    def __init__(self, features, labels):
+        super().__init__(features[:,:,:7], labels)
+    
+class DeepPacejkaDataset(DatasetBase):
+    def __init__(self, features, labels):
+        features = np.delete(features, [3,5], axis=2)
+        print(features.shape)
+        super().__init__(features, labels)
 
 class ModelBase(nn.Module):
     def __init__(self, param_dict, output_module, eval=False):
@@ -171,7 +181,6 @@ class DeepPacejkaModel(ModelBase):
         sys_param_dict, _ = self.unpack_sys_params(output)
         state_action_dict = self.unpack_state_actions(x)
         steering = state_action_dict["STEERING_FB"] + state_action_dict["STEERING_CMD"]
-        throttle = state_action_dict["THROTTLE_FB"] + state_action_dict["THROTTLE_CMD"]
         alphaf = steering - torch.atan2(self.vehicle_specs["lf"]*state_action_dict["YAW_RATE"] + state_action_dict["VY"], torch.abs(state_action_dict["VX"]))
         alphar = torch.atan2((self.vehicle_specs["lr"]*state_action_dict["YAW_RATE"] - state_action_dict["VY"]), torch.abs(state_action_dict["VX"]))
         Ffy = sys_param_dict["Df"] * torch.sin(sys_param_dict["Cf"] * torch.atan(sys_param_dict["Bf"] * alphaf))
@@ -187,4 +196,9 @@ class DeepPacejkaModel(ModelBase):
 string_to_model = {
     "DeepDynamics" : DeepDynamicsModel,
     "DeepPacejka" : DeepPacejkaModel,
+}
+
+string_to_dataset = {
+    "DeepDynamics" : DeepDynamicsDataset,
+    "DeepPacejka" : DeepPacejkaDataset,
 }

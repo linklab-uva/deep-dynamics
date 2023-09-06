@@ -2,11 +2,10 @@ STATE:
   - VX
   - VY
   - YAW_RATE
-  - THROTTLE_FB
   - STEERING_FB
 ACTIONS:
-  - THROTTLE_CMD
   - STEERING_CMD
+  - VREF
 PARAMETERS:
   - Bf: 2.579
   - Cf: 1.2

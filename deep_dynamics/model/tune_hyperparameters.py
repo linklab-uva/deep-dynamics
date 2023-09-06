@@ -3,7 +3,7 @@ import os
 from functools import partial
 import torch
 import numpy as np
-from deep_dynamics.model.models import DeepDynamicsDataset, DeepDynamicsModel, DeepPacejkaModel, string_to_model
+from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.train import train
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
@@ -51,7 +51,7 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     if not os.path.exists(output_dir):
             os.mkdir(output_dir)
     data_npy = np.load(dataset_file)
-    dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
+    dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"])
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True)
