@@ -45,24 +45,22 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
     valid_loss_min = torch.inf
     model.train()
     model.cuda()
-    weights = [1.0, 1.0, 1.0]
+    weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
     for i in range(model.epochs):
         train_steps = 0
         train_loss_accum = 0.0
         if model.is_rnn:
             h = model.init_hidden(model.batch_size)
-        for inputs, labels in train_data_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, labels, norm_inputs in train_data_loader:
+            inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
             if model.is_rnn:
                 h = h.data
             model.zero_grad()
             if model.is_rnn:
-                output, h, _ = model(inputs, h)
+                output, h, _ = model(inputs, norm_inputs, h)
             else:
-                output, _, _ = model(inputs)
-            loss = 0.0
-            for j in range(3):
-                loss += weights[j] * model.loss_function(output.squeeze()[:,j], labels.squeeze()[:,j].float())
+                output, _, _ = model(inputs, norm_inputs)
+            loss = model.weighted_mse_loss(output, labels, weights).mean()
             train_loss_accum += loss.item()
             train_steps += 1
             loss.backward()
@@ -70,18 +68,16 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
         model.eval()
         val_steps = 0
         val_loss_accum = 0.0
-        for inp, lab in val_data_loader:
+        for inp, lab, norm_inp in val_data_loader:
             if model.is_rnn:
                 val_h = model.init_hidden(inp.shape[0])
-            inp, lab = inp.to(device), lab.to(device)
+            inp, lab, norm_inp = inp.to(device), lab.to(device), norm_inp.to(device)
             if model.is_rnn:
                 val_h = val_h.data
-                out, val_h, _ = model(inp, val_h)
+                out, val_h, _ = model(inp, norm_inp, val_h)
             else:
-                out, _, _ = model(inp)
-            val_loss = 0.0
-            for j in range(3):
-                val_loss += weights[j] * model.loss_function(out.squeeze()[:,j], lab.squeeze()[:,j].float())
+                out, _, _ = model(inp, norm_inp)
+            val_loss = model.weighted_mse_loss(out, lab, weights).mean()
             val_loss_accum += val_loss.item()
             val_steps += 1
         mean_train_loss = train_loss_accum / train_steps

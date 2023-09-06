@@ -34,15 +34,15 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
         model.to(device)
         if eval_coeffs:
              sys_params = []
-        for inputs, labels in test_data_loader:
+        for inputs, labels, norm_inputs in test_data_loader:
             if model.is_rnn:
                 h = model.init_hidden(inputs.shape[0])
                 h = h.data
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
             if model.is_rnn:
-                output, h, sysid = model(inputs, h)
+                output, h, sysid = model(inputs, norm_inputs, h)
             else:
-                output, _, sysid = model(inputs)
+                output, _, sysid = model(inputs, norm_inputs)
             # output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             error = output.squeeze() - labels.squeeze().float()

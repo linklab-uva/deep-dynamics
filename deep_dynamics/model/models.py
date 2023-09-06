@@ -1,4 +1,5 @@
 from torch import nn
+from sklearn.preprocessing import StandardScaler
 import torch
 from build_network import build_network, string_to_torch, create_module
 import yaml
@@ -14,6 +15,11 @@ else:
 
 class DatasetBase(torch.utils.data.Dataset):
     def __init__(self, features, labels):
+        scalers = {}
+        self.X_norm = torch.zeros(features.shape)
+        for i in range(features.shape[2]):
+            scalers[i] = StandardScaler()
+            self.X_norm[:, :, i] = torch.from_numpy(scalers[i].fit_transform(features[:, :, i]))
         self.X_data = torch.from_numpy(features).float().to(device)
         self.y_data = torch.from_numpy(labels).float().to(device)
     def __len__(self):
@@ -21,7 +27,8 @@ class DatasetBase(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         x = self.X_data[idx]
         y = self.y_data[idx]
-        return x, y
+        x_norm = self.X_norm[idx]
+        return x, y, x_norm
     def split(self, percent):
         split_id = int(len(self)* 0.8)
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
@@ -66,13 +73,13 @@ class ModelBase(nn.Module):
     def differential_equation(self, x, output):
         pass
 
-    def forward(self, x, h0=None, Ts=0.02):
+    def forward(self, x, x_norm, h0=None, Ts=0.02):
         for i in range(len(self.feed_forward)):
             if i == 0:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
-                    ff, h0 = self.feed_forward[0](x[:,:,:7], h0)
+                    ff, h0 = self.feed_forward[0](x_norm, h0)
                 else:
-                    ff = self.feed_forward[i](torch.reshape(x[:,:,:7], (len(x), -1)))
+                    ff = self.feed_forward[i](torch.reshape(x_norm, (len(x), -1)))
             else:
                 if isinstance(self.feed_forward[i], torch.nn.RNNBase):
                     ff, h0 = self.feed_forward[0](ff, h0)
@@ -123,6 +130,9 @@ class ModelBase(nn.Module):
         weight = next(self.parameters()).data
         hidden = weight.new(self.rnn_n_layers, batch_size, self.rnn_hiden_dim).zero_().to(device)
         return hidden
+    
+    def weighted_mse_loss(self, input, target, weight):
+        return (weight * (input - target) ** 2)
 
     
 class DeepDynamicsModel(ModelBase):
