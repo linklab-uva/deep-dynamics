@@ -14,12 +14,17 @@ else:
     device = torch.device("cpu")
 
 class DatasetBase(torch.utils.data.Dataset):
-    def __init__(self, features, labels):
-        scalers = {}
+    def __init__(self, features, labels, scalers=None):
         self.X_norm = torch.zeros(features.shape)
-        for i in range(features.shape[2]):
-            scalers[i] = StandardScaler()
-            self.X_norm[:, :, i] = torch.from_numpy(scalers[i].fit_transform(features[:, :, i]))
+        if scalers is None:
+            self.scalers = {}
+            for i in range(features.shape[2]):
+                self.scalers[i] = StandardScaler()
+                self.X_norm[:, :, i] = torch.from_numpy(self.scalers[i].fit_transform(features[:, :, i]))
+        else:
+            self.scalers = scalers
+            for i in range(features.shape[2]):
+                self.X_norm[:, :, i] = torch.from_numpy(self.scalers[i].transform(features[:, :, i]))
         self.X_data = torch.from_numpy(features).float().to(device)
         self.y_data = torch.from_numpy(labels).float().to(device)
     def __len__(self):
@@ -34,14 +39,14 @@ class DatasetBase(torch.utils.data.Dataset):
         return torch.utils.data.random_split(self, [split_id, (len(self) - split_id)])
 
 class DeepDynamicsDataset(DatasetBase):
-    def __init__(self, features, labels):
-        super().__init__(features[:,:,:7], labels)
+    def __init__(self, features, labels, scalers=None):
+        super().__init__(features[:,:,:7], labels, scalers)
     
 class DeepPacejkaDataset(DatasetBase):
-    def __init__(self, features, labels):
+    def __init__(self, features, labels, scalers=None):
         features = np.delete(features, [3,5], axis=2)
         print(features.shape)
-        super().__init__(features, labels)
+        super().__init__(features, labels, scalers)
 
 class ModelBase(nn.Module):
     def __init__(self, param_dict, output_module, eval=False):

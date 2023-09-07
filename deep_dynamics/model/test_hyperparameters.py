@@ -3,16 +3,14 @@ import os
 import wandb
 import torch
 import numpy as np
+import pickle
 from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.evaluate import evaluate_predictions
-import csv
 
 def numbers(x):
     return int(x.split("_")[1].split(".")[0])
 
-def test_hyperparams(model_cfg, output_csv, log_wandb):
-    outfile = open(output_csv, 'w')
-    writer = csv.writer(outfile,delimiter=',')
+def test_hyperparams(model_cfg, log_wandb):
     model_name = os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0]
     print(model_name)
     for dir in os.listdir("../output/{}".format(model_name)):
@@ -35,7 +33,9 @@ def test_hyperparams(model_cfg, output_csv, log_wandb):
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         data_npy = np.load(dataset_file)
-        test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"])
+        with open(os.path.join(os.path.dirname(argdict["model_state_dict"]), "scalers.pkl"), "rb") as f:
+            scalers = pickle.load(f)
+        test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scalers)
         output_layer = param_dict["MODEL"]["LAYERS"][-1]
         param_dict["MODEL"]["LAYERS"] = []
         if gru_layers:
@@ -61,7 +61,6 @@ def test_hyperparams(model_cfg, output_csv, log_wandb):
         test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
         print("Starting experiment: {}".format(dir))
         losses = evaluate_predictions(model, test_data_loader, False)
-        writer.writerow([losses[0], losses[1], losses[2]])
         if log_wandb:
             api = wandb.Api()
             run = api.runs(path="cavalier-autonomous/{}".format(model_name), filters={"display_name" : dir})[0]
@@ -75,9 +74,8 @@ if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")
     parser.add_argument("model_cfg", type=str, help="Config file for model. Hyperparameters listed in the dictionary will be overwritten")
-    parser.add_argument("output_csv", type=str, help="CSV file to save results to")
     parser.add_argument("--log_wandb", action="store_true", default=False, help="Log test values to wandb experiment")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     argdict : dict = vars(args)
-    test_hyperparams(argdict["model_cfg"], argdict["output_csv"], argdict["log_wandb"])
+    test_hyperparams(argdict["model_cfg"], argdict["log_wandb"])

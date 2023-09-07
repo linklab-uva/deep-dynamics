@@ -1,6 +1,8 @@
 from deep_dynamics.model.models import DeepDynamicsDataset, string_to_model
 import torch
 import yaml
+import os
+import pickle
 import numpy as np
 
 if torch.cuda.is_available():
@@ -89,7 +91,9 @@ if __name__ == "__main__":
     model.to(device)
     model.load_state_dict(torch.load(argdict["model_state_dict"]))
     data_npy = np.load(argdict["dataset_file"])
-    test_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"])
+    with open(os.path.join(os.path.dirname(argdict["model_state_dict"]), "scalers.pkl"), "rb") as f:
+        scalers = pickle.load(f)
+    test_dataset = DeepDynamicsDataset(data_npy["features"], data_npy["labels"], scalers)
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
     losses = evaluate_predictions(model, test_data_loader, argdict["eval_coeffs"])
     print(losses)
