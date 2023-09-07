@@ -6,6 +6,7 @@ import numpy as np
 from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.train import train
 from ray import tune
+import pickle
 from ray.tune.schedulers import ASHAScheduler
 
 def main(model_cfg, log_wandb):
@@ -75,6 +76,8 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     param_dict["MODEL"]["HORIZON"] = hyperparam_config["horizon"]
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, os.path.basename(os.path.normpath(model_cfg)).split('.')[0], use_ray_tune=True)
+    with open(os.path.join(output_dir, "scalers.pkl"), "wb") as f:
+        pickle.dump(dataset.scalers, f)
 if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")
