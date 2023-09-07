@@ -39,15 +39,16 @@ def main(model_cfg, log_wandb):
     )
 
 def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
-    dataset_file = "/u/jlc9wr/deep-dynamics/data/LVMS_23_01_04_A_{}.npz".format(hyperparam_config["horizon"])
+    #dataset_file = "/u/jlc9wr/deep-dynamics/data/LVMS_23_01_04_A_{}.npz".format(hyperparam_config["horizon"])
+    dataset_file = "/u/jlc9wr/deep-dynamics/deep_dynamics/data/DYN-PP-ETHZ_{}.npz".format(hyperparam_config["horizon"])
     with open(model_cfg, 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     experiment_name = "%dlayers_%dneurons_%dbatch_%flr_%dhorizon_%dgru" % (hyperparam_config["layers"], hyperparam_config["neurons"], hyperparam_config["batch_size"], hyperparam_config["lr"], hyperparam_config["horizon"], hyperparam_config["gru_layers"])
-    if not os.path.exists("/u/jlc9wr/deep-dynamics/output"):
-        os.mkdir("/u/jlc9wr/deep-dynamics/output")
-    if not os.path.exists("/u/jlc9wr/deep-dynamics/output/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0])):
-        os.mkdir("/u/jlc9wr/deep-dynamics/output/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0]))
-    output_dir = "/u/jlc9wr/deep-dynamics/output/%s/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0], experiment_name)
+    if not os.path.exists("/u/jlc9wr/deep-dynamics/deep_dynamics/output"):
+        os.mkdir("/u/jlc9wr/deep-dynamics/deep_dynamics/output")
+    if not os.path.exists("/u/jlc9wr/deep-dynamics/deep_dynamics/output/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0])):
+        os.mkdir("/u/jlc9wr/deep-dynamics/deep_dynamics/output/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0]))
+    output_dir = "/u/jlc9wr/deep-dynamics/deep_dynamics/output/%s/%s" % (os.path.basename(os.path.normpath(model_cfg)).split('.')[0], experiment_name)
     if not os.path.exists(output_dir):
             os.mkdir(output_dir)
     data_npy = np.load(dataset_file)
