@@ -33,10 +33,9 @@ def test_hyperparams(model_cfg, log_wandb):
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         data_npy = np.load(dataset_file)
-        with open(os.path.join(os.path.dirname(argdict["model_state_dict"]), "scalers.pkl"), "rb") as f:
-            scalers = pickle.load(f)
-        test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scalers)
-        output_layer = param_dict["MODEL"]["LAYERS"][-1]
+        with open(os.path.join(os.path.dirname(argdict["model_state_dict"]), "scaler.pkl"), "rb") as f:
+            scaler = pickle.load(f)
+        test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scaler)
         param_dict["MODEL"]["LAYERS"] = []
         if gru_layers:
             layer = dict()
@@ -50,7 +49,6 @@ def test_hyperparams(model_cfg, log_wandb):
             layer["OUT_FEATURES"] = neurons
             layer["ACTIVATION"] = "Mish"
             param_dict["MODEL"]["LAYERS"].append(layer)
-        param_dict["MODEL"]["LAYERS"].append(output_layer)
         param_dict["MODEL"]["HORIZON"] = horizon
         model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
         try:

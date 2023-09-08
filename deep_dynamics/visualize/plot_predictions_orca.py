@@ -8,8 +8,10 @@ from bayes_race.models import Dynamic
 from bayes_race.params import ORCA
 import torch
 import yaml
+import os
+import pickle
 from tqdm import tqdm
-from deep_dynamics.model.models import string_to_model, DeepDynamicsDataset
+from deep_dynamics.model.models import string_to_model, string_to_dataset
 from deep_dynamics.tools.bayesrace_parser import write_dataset
 
 #####################################################################
@@ -36,8 +38,10 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/13layers_108neurons_4batch_0.000317lr_8horizon_11gru/epoch_235.pth"
+state_dict = "../output/deep_dynamics/test2/epoch_400.pth"
 dataset_file = "../data/DYN-NMPC-NOCONS-ETHZMobil.npz"
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	ddm_scaler = pickle.load(f)
 
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
@@ -46,10 +50,15 @@ ddm.to(device)
 ddm.eval()
 ddm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, ddm.horizon, save=False)
+stop_idx = len(poses)
+for i in range(len(poses)): ## Odometry set to 0 when lap is finished
+	if poses[i,0] == 0.0 and poses[i,1] == 0.0:
+		stop_idx = i
+		break
 samples = list(range(50, 300, 50))
-ddm_dataset = DeepDynamicsDataset(features, labels)
-print(len(features))
-ddm_predictions = np.zeros((len(ddm_dataset) - HORIZON, 6, HORIZON+1))
+driving_inputs = features[:,0,3:5] + features[:,0,5:7]
+ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, ddm_scaler)
+ddm_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
 ddm_data_loader = torch.utils.data.DataLoader(ddm_dataset, batch_size=1, shuffle=False)
 params = ORCA(control='pwm')
 ddm_model = Dynamic(**params)
@@ -64,9 +73,9 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 		h = h.data
 	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
 	if ddm.is_rnn:
-		_, h, ddm_output, _ = ddm(inputs, None, h)
+		_, h, ddm_output = ddm(inputs, norm_inputs, h)
 	else:
-		_, _, ddm_output, _ = ddm(inputs, None)
+		_, _, ddm_output = ddm(inputs, norm_inputs)
 	# Simulate model
 	ddm_output = ddm_output.cpu().detach().numpy()[0]
 	idx = 0
@@ -78,9 +87,9 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 	displacement_error = 0.0
 	for idh in range(HORIZON):
 		# Predict over horizon
-		ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], features[idt+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
-		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
 	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
 	idt += 1
@@ -90,17 +99,19 @@ print("DDM Average Displacement Error:", average_displacement_error)
 print("DDM Final Displacement Error:", final_displacement_error)
 
 	
-
+# DPM GT
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
+state_dict = "../output/deep_pacejka/test/epoch_375.pth"
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-dpm_dataset = DeepDynamicsDataset(features, labels)
-dpm_predictions = np.zeros((len(dpm_dataset) - HORIZON, 6, HORIZON+1))
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, dpm_scaler)
+dpm_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
 params = ORCA(control='pwm')
 dpm_model = Dynamic(**params)
@@ -115,9 +126,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		h = h.data
 	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
 	if dpm.is_rnn:
-		_, h, dpm_output, _ = dpm(inputs, None, h)
+		_, h, dpm_output = dpm(inputs, norm_inputs, h)
 	else:
-		_, _, dpm_output, _ = dpm(inputs, None)
+		_, _, dpm_output = dpm(inputs, norm_inputs)
 	# Simulate model
 	dpm_output = dpm_output.cpu().detach().numpy()[0]
 	idx = 0
@@ -129,7 +140,7 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 	displacement_error = 0.0
 	for idh in range(HORIZON):
 		# Predict over horizon
-		dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], features[idt+idh, 0, 5:].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
 		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
@@ -137,8 +148,116 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
-print("DPM Average Displacement Error:", average_displacement_error)
-print("DPM Final Displacement Error:", final_displacement_error)
+print("DPM GT Average Displacement Error:", average_displacement_error)
+print("DPM GT Final Displacement Error:", final_displacement_error)
+
+# DPM Iz + 20%
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/plus20/epoch_71.pth"
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	dpm_scaler = pickle.load(f)
+with open(param_file, 'rb') as f:
+	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+param_dict["VEHICLE_SPECS"]["Iz"] *= 1.2
+dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
+dpm.cuda()
+dpm.load_state_dict(torch.load(state_dict))
+features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, dpm_scaler)
+dpm_plus_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
+dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
+params = ORCA(control='pwm')
+params["Iz"] *= 1.2
+dpm_model = Dynamic(**params)
+idt = 0
+average_displacement_error = 0.0
+final_displacement_error = 0.0
+for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_plus_predictions)):
+	if idt == len(dpm_plus_predictions):
+		break
+	if dpm.is_rnn:
+		h = dpm.init_hidden(inputs.shape[0])
+		h = h.data
+	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+	if dpm.is_rnn:
+		_, h, dpm_output = dpm(inputs, norm_inputs, h)
+	else:
+		_, _, dpm_output = dpm(inputs, norm_inputs)
+	# Simulate model
+	dpm_output = dpm_output.cpu().detach().numpy()[0]
+	idx = 0
+	for param in dpm.sys_params:
+		params[param] = dpm_output[idx]
+		idx += 1
+	dpm_model = Dynamic(**params)
+	dpm_plus_predictions[idt,:,0] = poses[idt, :]
+	displacement_error = 0.0
+	for idh in range(HORIZON):
+		# Predict over horizon
+		dpm_next, _ = dpm_model.sim_continuous(dpm_plus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		dpm_plus_predictions[idt,:,idh+1] = dpm_next[:,-1]
+		displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	average_displacement_error += displacement_error / HORIZON
+	final_displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	idt += 1
+average_displacement_error /= len(ddm_predictions)
+final_displacement_error /= len(ddm_predictions)
+print("DPM +20 Average Displacement Error:", average_displacement_error)
+print("DPM +20 Final Displacement Error:", final_displacement_error)
+
+# DPM Iz - 20%
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/minus20/epoch_347.pth"
+param_dict["VEHICLE_SPECS"]["Iz"] *= 0.8
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	dpm_scaler = pickle.load(f)
+with open(param_file, 'rb') as f:
+	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
+dpm.cuda()
+dpm.load_state_dict(torch.load(state_dict))
+features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, dpm_scaler)
+dpm_minus_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
+dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
+params = ORCA(control='pwm')
+params["Iz"] *= 0.8
+dpm_model = Dynamic(**params)
+idt = 0
+average_displacement_error = 0.0
+final_displacement_error = 0.0
+for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_minus_predictions)):
+	if idt == len(dpm_minus_predictions):
+		break
+	if dpm.is_rnn:
+		h = dpm.init_hidden(inputs.shape[0])
+		h = h.data
+	inputs, labels, norm_inputs = inputs.to(device), labels.to(device), norm_inputs.to(device)
+	if dpm.is_rnn:
+		_, h, dpm_output = dpm(inputs, norm_inputs, h)
+	else:
+		_, _, dpm_output = dpm(inputs, norm_inputs)
+	# Simulate model
+	dpm_output = dpm_output.cpu().detach().numpy()[0]
+	idx = 0
+	for param in dpm.sys_params:
+		params[param] = dpm_output[idx]
+		idx += 1
+	dpm_model = Dynamic(**params)
+	dpm_minus_predictions[idt,:,0] = poses[idt, :]
+	displacement_error = 0.0
+	for idh in range(HORIZON):
+		# Predict over horizon
+		dpm_next, _ = dpm_model.sim_continuous(dpm_minus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
+		dpm_minus_predictions[idt,:,idh+1] = dpm_next[:,-1]
+		displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	average_displacement_error += displacement_error / HORIZON
+	final_displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	idt += 1
+average_displacement_error /= len(ddm_predictions)
+final_displacement_error /= len(ddm_predictions)
+print("DPM -20 Average Displacement Error:", average_displacement_error)
+print("DPM -20 Final Displacement Error:", final_displacement_error)
 
 #####################################################################
 # plots
@@ -156,12 +275,16 @@ for idx in samples:
 	if not legend_initialized:
 		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo', label='Ground Truth')
 		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
-		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka")
+		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka (GT)")
+		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co', label="Deep Pacejka (+20%)")
+		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo', label="Deep Pacejka (-20%)")
 		legend_initialized = True
 	else:
 		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo')
 		plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go')
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
+		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co')
+		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo')
 
 plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
 plt.show()

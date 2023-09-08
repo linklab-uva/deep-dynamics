@@ -14,7 +14,6 @@ def write_dataset(csv_path, horizon, save=True):
         odometry = []
         throttle_cmds = []
         steering_cmds = []
-        gears = []
         poses = []
         column_idxs = dict()
         previous_throttle = 0.0
@@ -26,7 +25,7 @@ def write_dataset(csv_path, horizon, save=True):
                     column_idxs[row[i].split("(")[0]] = i
                 continue
             vx = float(row[column_idxs["vx"]])
-            if abs(vx) < 10:
+            if abs(vx) < 25:
                 if started:
                     break
                 brake = float(row[column_idxs["brake_ped_cmd"]])
@@ -58,10 +57,10 @@ def write_dataset(csv_path, horizon, save=True):
         odometry = np.array(odometry)
         throttle_cmds = np.array(throttle_cmds)
         steering_cmds = np.array(steering_cmds)
-        features = np.zeros((len(throttle_cmds) - horizon - 1,  horizon, 7), dtype=np.double)
+        features = np.zeros((len(throttle_cmds) - horizon - 1,  horizon, 8), dtype=np.double)
         labels = np.zeros((len(throttle_cmds) - horizon - 1, 3), dtype=np.double)
-        for i in tqdm(range(len(throttle_cmds) - horizon - 1), desc="Compiling dataset"):
-            features[i] = np.array([*odometry[i:i+horizon].T, throttle_cmds[i:i+horizon], steering_cmds[i:i+horizon]]).T
+        for i in tqdm(range(len(throttle_cmds) - horizon - 1 - 5), desc="Compiling dataset"):
+            features[i] = np.array([*odometry[i:i+horizon].T, throttle_cmds[i:i+horizon], steering_cmds[i:i+horizon], odometry[i+5:i+horizon+5,0]]).T
             labels[i] = np.array([*odometry[i+horizon]])[:3]
         poses = np.array(poses)
         print("Final features shape:", features.shape)
