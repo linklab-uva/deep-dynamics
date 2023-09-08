@@ -75,6 +75,27 @@ dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 dpm_model = Dynamic(**params)
 
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/plus20/epoch_*.pth"
+with open(param_file, 'rb') as f:
+	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+param_dict["VEHICLE_SPECS"]["Iz"] *= 1.2
+dpm_plus20 = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
+dpm_plus20.cuda()
+dpm_plus20.load_state_dict(torch.load(state_dict))
+dpm_plus20_model = Dynamic(**params)
+
+param_file = "../cfgs/model/deep_pacejka.yaml"
+state_dict = "../output/deep_pacejka/minus20/epoch_*.pth"
+with open(param_file, 'rb') as f:
+	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+param_dict["VEHICLE_SPECS"]["Iz"] *= 0.8
+dpm_minus20 = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
+dpm_minus20.cuda()
+dpm_minus20.load_state_dict(torch.load(state_dict))
+dpm_minus20_model = Dynamic(**params)
+
+
 #####################################################################
 
 
@@ -98,9 +119,7 @@ nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, model, track, track_
 states = np.zeros([n_states, n_steps+1])
 dstates = np.zeros([8, n_steps+1])
 ddm_states = np.zeros([3, n_steps+1])
-ddm_forces = np.zeros([3, n_steps+1])
 dpm_states = np.zeros([3, n_steps+1])
-dpm_forces = np.zeros([3, n_steps+1])
 inputs = np.zeros([n_inputs, n_steps])
 time = np.linspace(0, n_steps, n_steps+1)*Ts
 Ffy = np.zeros([n_steps+1])
@@ -111,6 +130,8 @@ hstates2 = np.zeros([n_states,horizon+1])
 ddm_predictions = np.zeros([n_steps+1, n_states, horizon+1])
 ddm_horizon = np.zeros([5, horizon+ddm.horizon])
 dpm_predictions = np.zeros([n_steps+1, n_states, horizon+1])
+dpm_plus20_predictions = np.zeros([n_steps+1, n_states, horizon+1])
+dpm_minus20_predictions = np.zeros([n_steps+1, n_states, horizon+1])
 dpm_horizon = np.zeros([5, horizon+dpm.horizon])
 
 projidx = 0
@@ -183,8 +204,7 @@ for idt in range(n_steps-horizon):
 		# Create DDM model
 		ddm_data = np.array([*ddm_horizon[:, :ddm.horizon], *(ddm_horizon[3:,1:ddm.horizon+1] - ddm_horizon[3:,:ddm.horizon])], dtype=np.float32)
 		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
-		_, _ , ddm_output , ddm_force = ddm(ddm_data)
-		ddm_forces[:,idt+1] = np.squeeze(ddm_force, axis=1)
+		_, _ , ddm_output  = ddm(ddm_data)
 		ddm_output = ddm_output.cpu().detach().numpy()[0]
 		idx = 0
 		for param in ddm.sys_params:
@@ -194,22 +214,39 @@ for idt in range(n_steps-horizon):
 		# Create DPM model
 		dpm_data = np.array([*dpm_horizon[:, :dpm.horizon], *(dpm_horizon[3:,1:dpm.horizon+1] - dpm_horizon[3:,:dpm.horizon])], dtype=np.float32)
 		dpm_data = torch.from_numpy(np.expand_dims(dpm_data.T, axis=0)).cuda()
-		_, _ , dpm_output , dpm_force = dpm(dpm_data)
-		dpm_forces[:,idt+1] = np.squeeze(dpm_force, axis=1)
+		_, _ , dpm_output = dpm(dpm_data)
+		_, _ , dpm_plus20_output = dpm_plus20(dpm_data)
+		_, _ , dpm_minus20_output = dpm_minus20(dpm_data)
 		dpm_output = dpm_output.cpu().detach().numpy()[0]
+		ddm_plus20_output = ddm_plus20_output.cpu().detach().numpy()[0]
+		ddm_minus20_output = ddm_minus20_output.cpu().detach().numpy()[0]
 		idx = 0
 		for param in dpm.sys_params:
 			params[param] = dpm_output[idx]
 			idx += 1
 		dpm_model = Dynamic(**params)
+		for param in dpm.sys_params:
+			params[param] = dpm_plus20_output[idx]
+			idx += 1
+		dpm_plus20_model = Dynamic(**params)
+		for param in dpm.sys_params:
+			params[param] = dpm_minus20_output[idx]
+			idx += 1
+		dpm_minus20_model = Dynamic(**params)
 		ddm_predictions[idt,:,0] = x0
 		dpm_predictions[idt,:,0] = x0
+		dpm_plus20_predictions[idt,:,0] = x0
+		dpm_minus20_predictions[idt,:,0] = x0
 		for idh in range(horizon):
 			# Predict over horizon
 			ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
 			ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
 			dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
 			dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
+			dpm_plus20_next, _ = dpm_plus20_model.sim_continuous(dpm_plus20_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+			dpm_plus20_predictions[idt,:,idh+1] = dpm_plus20_next[:,-1]
+			dpm_minus20_next, _ = dpm_minus20_model.sim_continuous(dpm_minus20_predictions[idt,:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+			dpm_minus20_predictions[idt,:,idh+1] = dpm_minus20_next[:,-1]
 		
 
 	# forward sim to predict over the horizon
@@ -259,10 +296,10 @@ if SAVE_RESULTS:
 		states=states,
 		ddm_states=ddm_states,
 		dpm_states=dpm_states,
-		ddm_forces=ddm_forces,
-		dpm_forces=dpm_forces,
 		ddm_predictions=ddm_predictions,
 		dpm_predictions=dpm_predictions,
+		dpm_plus20_predictions=dpm_plus20_predictions,
+		dpm_minus20_predictions=dpm_minus20_predictions,
 		forces=np.vstack([Ffy, Frx, Fry]),
 		dstates=dstates,
 		inputs=inputs,
