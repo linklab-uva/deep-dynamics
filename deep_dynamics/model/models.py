@@ -1,7 +1,7 @@
 from torch import nn
 from sklearn.preprocessing import StandardScaler
 import torch
-from build_network import build_network, string_to_torch, create_module
+from deep_dynamics.model.build_network import build_network, string_to_torch, create_module
 import yaml
 import pickle
 import numpy as np
@@ -14,19 +14,20 @@ else:
     device = torch.device("cpu")
 
 class DatasetBase(torch.utils.data.Dataset):
-    def __init__(self, features, labels, scalers=None):
-        self.X_norm = torch.zeros(features.shape)
-        if scalers is None:
-            self.scalers = {}
-            for i in range(features.shape[2]):
-                self.scalers[i] = StandardScaler()
-                self.X_norm[:, :, i] = torch.from_numpy(self.scalers[i].fit_transform(features[:, :, i]))
-        else:
-            self.scalers = scalers
-            for i in range(features.shape[2]):
-                self.X_norm[:, :, i] = torch.from_numpy(self.scalers[i].transform(features[:, :, i]))
+    def __init__(self, features, labels, scaler=None):
         self.X_data = torch.from_numpy(features).float().to(device)
         self.y_data = torch.from_numpy(labels).float().to(device)
+        self.X_norm = torch.zeros(features.shape)
+        num_instances, num_time_steps, num_features = features.shape
+        train_data = features.reshape((-1, num_features))
+        if scaler is None:
+            self.scaler = StandardScaler()
+            norm_train_data = self.scaler.fit_transform(train_data)
+            self.X_norm = torch.from_numpy(norm_train_data.reshape((num_instances, num_time_steps, num_features))).float().to(device)
+        else:
+            self.scaler = scaler
+            norm_train_data = self.scaler.transform(train_data)
+            self.X_norm = torch.from_numpy(norm_train_data.reshape((num_instances, num_time_steps, num_features))).float().to(device)
     def __len__(self):
         return(self.X_data.shape[0])
     def __getitem__(self, idx):
@@ -45,7 +46,6 @@ class DeepDynamicsDataset(DatasetBase):
 class DeepPacejkaDataset(DatasetBase):
     def __init__(self, features, labels, scalers=None):
         features = np.delete(features, [3,5], axis=2)
-        print(features.shape)
         super().__init__(features, labels, scalers)
 
 class ModelBase(nn.Module):
@@ -61,6 +61,7 @@ class ModelBase(nn.Module):
             layers.insert(1, nn.Flatten())
         else:
             self.is_rnn = False
+        self.horizon = self.param_dict["MODEL"]["HORIZON"]
         layers.extend(output_module)
         self.feed_forward = nn.ModuleList(layers)
         if eval:
