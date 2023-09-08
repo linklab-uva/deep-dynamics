@@ -56,7 +56,6 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     train_dataset, val_dataset = dataset.split(0.85)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=hyperparam_config["batch_size"], shuffle=False)
-    output_layer = param_dict["MODEL"]["LAYERS"][-1]
     param_dict["MODEL"]["LAYERS"] = []
     if hyperparam_config["gru_layers"]:
         layer = dict()
@@ -70,14 +69,13 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
         layer["OUT_FEATURES"] = hyperparam_config["neurons"]
         layer["ACTIVATION"] = "Mish"
         param_dict["MODEL"]["LAYERS"].append(layer)
-    param_dict["MODEL"]["LAYERS"].append(output_layer)
     param_dict["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"] = hyperparam_config["batch_size"]
     param_dict["MODEL"]["OPTIMIZATION"]["LR"] = hyperparam_config["lr"]
     param_dict["MODEL"]["HORIZON"] = hyperparam_config["horizon"]
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
     train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, os.path.basename(os.path.normpath(model_cfg)).split('.')[0], use_ray_tune=True)
-    with open(os.path.join(output_dir, "scalers.pkl"), "wb") as f:
-        pickle.dump(dataset.scalers, f)
+    with open(os.path.join(output_dir, "scaler.pkl"), "wb") as f:
+        pickle.dump(dataset.scaler, f)
 if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")

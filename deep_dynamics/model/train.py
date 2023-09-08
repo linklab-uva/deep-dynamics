@@ -141,8 +141,8 @@ if __name__ == "__main__":
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=False, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=False)
     train(model, train_data_loader, val_data_loader, argdict["experiment_name"], argdict["log_wandb"], output_dir)
-    with open(os.path.join(output_dir, "scalers.pkl"), "wb") as f:
-        pickle.dump(dataset.scalers, f)
+    with open(os.path.join(output_dir, "scaler.pkl"), "wb") as f:
+        pickle.dump(dataset.scaler, f)
         
 
     
