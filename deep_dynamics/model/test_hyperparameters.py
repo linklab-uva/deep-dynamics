@@ -8,11 +8,14 @@ from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.evaluate import evaluate_predictions
 
 def numbers(x):
-    return int(x.split("_")[1].split(".")[0])
+    try:
+        idx = int(x.split("_")[1].split(".")[0])
+    except:
+        idx = 0
+    return idx
 
 def test_hyperparams(model_cfg, log_wandb):
     model_name = os.path.basename(os.path.normpath(argdict["model_cfg"])).split('.')[0]
-    print(model_name)
     for dir in os.listdir("../output/{}".format(model_name)):
         hyperparam_values = []
         previous_c_digit = False
@@ -29,7 +32,8 @@ def test_hyperparams(model_cfg, log_wandb):
         neurons = int(hyperparam_values[1])
         horizon = int(hyperparam_values[4])
         gru_layers = int(hyperparam_values[5])
-        dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
+        #dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
+        dataset_file = "../data/DYN-PP-ETHZ_{}.npz".format(horizon)
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         data_npy = np.load(dataset_file)
@@ -53,9 +57,9 @@ def test_hyperparams(model_cfg, log_wandb):
         model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
         try:
             model_file = sorted(os.listdir("../output/{}/{}".format(model_name, dir)), key=numbers)[-1]
-        except IndexError:
+            model.load_state_dict(torch.load(os.path.join("../output/{}/{}".format(model_name, dir), model_file)))
+        except:
             continue
-        model.load_state_dict(torch.load(os.path.join("../output/{}/{}".format(model_name, dir), model_file)))
         test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
         print("Starting experiment: {}".format(dir))
         losses = evaluate_predictions(model, test_data_loader, False)
