@@ -20,7 +20,7 @@ VEHICLE_SPECS:
   mass: 790.0
   Iz: 1000.0
 MODEL:
-  NAME: DeepPacejka
+  NAME: DeepPacejkaIAC
   HORIZON: 1
   LAYERS:
     - GRU:

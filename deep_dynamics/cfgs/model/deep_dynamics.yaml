@@ -27,10 +27,20 @@ PARAMETERS:
     Min: 0.1
     Max: 0.9
   - Cm1: 0.287
+    Min: 0.1435
+    Max: 0.574
   - Cm2: 0.0545
+    Min: 0.02725
+    Max: 0.109
   - Cr0: 0.0518
+    Min: 0.0259
+    Max: 0.1036
   - Cr2: 0.00035
+    Min: 1.75e-4
+    Max: 7.0e-4
   - Iz: 27.8e-6
+    Min: 1.39e-5
+    Max: 5.56e-5
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
@@ -41,49 +51,49 @@ MODEL:
   LAYERS:
     - GRU:
       OUT_FEATURES: 64
-      LAYERS: 11
+      LAYERS: 16
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 108
+      OUT_FEATURES: 469
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 32
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
     LR: 0.0002

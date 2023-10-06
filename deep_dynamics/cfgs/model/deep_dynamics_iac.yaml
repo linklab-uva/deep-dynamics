@@ -9,34 +9,50 @@ ACTIONS:
   - STEERING_CMD
 PARAMETERS:
   - Bf:
-    Min: 1.0
-    Max: 12.0
+    Min: 5.0
+    Max: 30.0
   - Cf:
-    Min: 1.0
+    Min: 0.5
     Max: 2.0
   - Df:
-    Min: 0.1
-    Max: 1.9
+    Min: 100.0
+    Max: 10000.0
+  - Ef:
+    Min: -2.0
+    Max: 0.0
   - Br:
-    Min: 1.0
-    Max: 12.0
+    Min: 5.0
+    Max: 30.0
   - Cr:
-    Min: 1.0
+    Min: 0.5
     Max: 2.0
   - Dr:
-    Min: 0.1
-    Max: 0.9 
-  - Cm1: 
-  - Cm2: 
-  - Cr0: 
-  - Cr2: 
+    Min: 100.0
+    Max: 10000.0
+  - Er:
+    Min: -2.0
+    Max: 0.0
+  - Cm1:
+    Min: 0.0
+    Max: 1000.0  
+  - Cm2:
+    Min: 0.0
+    Max: 1.0
+  - Cr0:
+    Min: 0.348
+    Max: 1.392
+  - Cr2:
+    Min: 0.179
+    Max: 0.718
   - Iz: 
+    Min: 500.0
+    Max: 2000.0
 VEHICLE_SPECS:
   lf: 1.248
   lr: 1.7328
   mass: 790.0
 MODEL:
-  NAME: DeepDynamics
+  NAME: DeepDynamicsIAC
   HORIZON: 5
   LAYERS:
     - GRU:

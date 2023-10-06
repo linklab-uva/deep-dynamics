@@ -26,11 +26,11 @@ def main(model_cfg, log_wandb):
         metric='loss',
         mode='min',
         max_t=400,
-        grace_period=50,
+        grace_period=100,
     )
     result = tune.run(
         partial(tune_hyperparams, model_cfg=model_cfg, log_wandb=log_wandb),
-        resources_per_trial={"cpu": 1, "gpu": 0.2},
+        resources_per_trial={"cpu": 1.0, "gpu": 1/6},
         config=config,
         num_samples=200,
         scheduler=scheduler,
@@ -40,8 +40,9 @@ def main(model_cfg, log_wandb):
     )
 
 def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
-    dataset_file = "/u/jlc9wr/deep-dynamics/deep_dynamics/data/LVMS_23_01_04_A_{}.npz".format(hyperparam_config["horizon"])
+    # dataset_file = "/u/jlc9wr/deep-dynamics/deep_dynamics/data/LVMS_23_01_04_A_{}.npz".format(hyperparam_config["horizon"])
     # dataset_file = "/u/jlc9wr/deep-dynamics/deep_dynamics/data/DYN-PP-ETHZ_{}.npz".format(hyperparam_config["horizon"])
+    dataset_file = "/u/jlc9wr/deep-dynamics/deep_dynamics/data/Putnam_park2023_run4_2_{}.npz".format(hyperparam_config["horizon"])
     with open(model_cfg, 'rb') as f:
         param_dict = yaml.load(f, Loader=yaml.SafeLoader)
     experiment_name = "%dlayers_%dneurons_%dbatch_%flr_%dhorizon_%dgru" % (hyperparam_config["layers"], hyperparam_config["neurons"], hyperparam_config["batch_size"], hyperparam_config["lr"], hyperparam_config["horizon"], hyperparam_config["gru_layers"])
@@ -74,9 +75,9 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
     param_dict["MODEL"]["OPTIMIZATION"]["LR"] = hyperparam_config["lr"]
     param_dict["MODEL"]["HORIZON"] = hyperparam_config["horizon"]
     model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict)
-    train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, os.path.basename(os.path.normpath(model_cfg)).split('.')[0], use_ray_tune=True)
     with open(os.path.join(output_dir, "scaler.pkl"), "wb") as f:
         pickle.dump(dataset.scaler, f)
+    train(model, train_data_loader, val_data_loader, experiment_name, log_wandb, output_dir, os.path.basename(os.path.normpath(model_cfg)).split('.')[0], use_ray_tune=True)
 if __name__ == "__main__":
     import argparse, argcomplete
     parser = argparse.ArgumentParser(description="Tune hyperparameters of a model")

@@ -32,12 +32,13 @@ def test_hyperparams(model_cfg, log_wandb):
         neurons = int(hyperparam_values[1])
         horizon = int(hyperparam_values[4])
         gru_layers = int(hyperparam_values[5])
-        #dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
-        dataset_file = "../data/DYN-PP-ETHZ_{}.npz".format(horizon)
+        # dataset_file = "../data/LVMS_23_01_04_B_{}.npz".format(horizon)
+        dataset_file = "../data/DYN-PP-ETHZMobil_{}.npz".format(horizon)
+        # dataset_file = "../data/DYN-PP-ETHZ_{}.npz".format(horizon)
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
         data_npy = np.load(dataset_file)
-        with open(os.path.join(os.path.dirname(argdict["model_state_dict"]), "scaler.pkl"), "rb") as f:
+        with open(os.path.join("../output/{}".format(model_name), dir, "scaler.pkl"), "rb") as f:
             scaler = pickle.load(f)
         test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scaler)
         param_dict["MODEL"]["LAYERS"] = []
