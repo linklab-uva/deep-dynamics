@@ -96,4 +96,4 @@ MODEL:
     BATCH_SIZE: 32
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0002
+    LR: 0.001

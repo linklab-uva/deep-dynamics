@@ -52,20 +52,49 @@ VEHICLE_SPECS:
   lr: 1.7328
   mass: 790.0
 MODEL:
+<<<<<<< HEAD
   NAME: DeepDynamicsIAC
   HORIZON: 5
+=======
+  NAME: DeepDynamics
+  HORIZON: 15
+>>>>>>> ac62f5fa07a379c3d0d421cdae44cbac8ef8e9ce
   LAYERS:
     - GRU:
-      OUT_FEATURES: 25
-      LAYERS: 3
+      OUT_FEATURES: 225
+      LAYERS: 15
     - DENSE:
-      OUT_FEATURES: 51
+      OUT_FEATURES: 258
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 51
+      OUT_FEATURES: 258
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 51
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 258
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE

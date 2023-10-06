@@ -2,3 +2,4 @@ __pycache__/
 *.pth
 build/
 *.egg-info
+*.pkl

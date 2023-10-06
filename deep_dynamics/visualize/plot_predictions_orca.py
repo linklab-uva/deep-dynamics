@@ -38,7 +38,7 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/test2/epoch_400.pth"
+state_dict = "../output/deep_dynamics/13layers_469neurons_4batch_0.000194lr_8horizon_16gru/epoch_106.pth"
 dataset_file = "../data/DYN-NMPC-NOCONS-ETHZMobil.npz"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	ddm_scaler = pickle.load(f)
@@ -91,7 +91,7 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 		ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
 		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -101,7 +101,7 @@ print("DDM Final Displacement Error:", final_displacement_error)
 	
 # DPM GT
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/test/epoch_375.pth"
+state_dict = "../output/deep_pacejka/4layers_289neurons_4batch_0.000185lr_7horizon_11gru/epoch_398.pth"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
@@ -142,9 +142,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	final_displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -153,7 +153,7 @@ print("DPM GT Final Displacement Error:", final_displacement_error)
 
 # DPM Iz + 20%
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/plus20/epoch_71.pth"
+state_dict = "../output/deep_pacejka/plus20/epoch_247.pth"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
@@ -196,9 +196,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_plus_pred
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_plus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_plus_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+		displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	final_displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -207,7 +207,7 @@ print("DPM +20 Final Displacement Error:", final_displacement_error)
 
 # DPM Iz - 20%
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/minus20/epoch_347.pth"
+state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
 param_dict["VEHICLE_SPECS"]["Iz"] *= 0.8
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
@@ -250,9 +250,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_minus_pre
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_minus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_minus_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+		displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh,:2])**2)
+	final_displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)

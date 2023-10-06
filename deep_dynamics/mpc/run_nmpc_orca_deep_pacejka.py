@@ -8,7 +8,6 @@ import sys
 import time as tm
 import numpy as np
 import casadi
-import _pickle as pickle
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
@@ -22,6 +21,8 @@ from bayes_race.pp import purePursuit
 from deep_dynamics.model.models import DeepDynamicsModel, string_to_model
 import yaml
 import torch
+import os
+import pickle
 
 #####################################################################
 # CHANGE THIS
@@ -62,12 +63,16 @@ model = Dynamic(**params)
 # deep dynamics parameters
 
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/9layers_40neurons_2batch_0.000403lr_4horizon_7gru/epoch_357.pth"
+# state_dict = "../output/deep_pacejka/4layers_289neurons_4batch_0.000185lr_7horizon_11gru/epoch_398.pth"
+state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
+# state_dict = "../output/deep_pacejka/plus20/epoch_247.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 ddm.cuda()
 ddm.load_state_dict(torch.load(state_dict))
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	ddm_scaler = pickle.load(f)
 
 #####################################################################
 
@@ -106,6 +111,7 @@ Frx = np.zeros([n_steps+1])
 Fry = np.zeros([n_steps+1])
 hstates = np.zeros([n_states,horizon+1])
 hstates2 = np.zeros([n_states,horizon+1])
+vrefs = np.zeros((n_steps+1, 1))
 
 projidx = 0
 x_init = np.zeros(n_states)
@@ -152,10 +158,20 @@ for idt in range(n_steps-horizon):
 	uprev = inputs[:,idt-1]
 	x0 = states[:,idt]
 
-	if idt > ddm.horizon:
-		ddm_data = np.array([*dstates[3:, idt-ddm.horizon:idt], *inputs[:,idt-ddm.horizon:idt]], dtype=np.float32)
-		ddm_data = torch.from_numpy(np.expand_dims(ddm_data.T, axis=0)).cuda()
-		ddm_state ,_ , ddm_output, ddm_force = ddm(ddm_data)
+	# planner based on BayesOpt
+	xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
+	vrefs[idt] = track.v_raceline[projidx]
+	if idt > 15:
+		ddm_data = np.vstack((dstates[3:6, idt-ddm.horizon:idt], dstates[7, idt-ddm.horizon:idt], inputs[1,idt-ddm.horizon+1:idt+1], vrefs[idt-ddm.horizon:idt].T)).T
+		# ddm_data = np.array([*dstates[3:, idt-ddm.horizon:idt], *inputs[1,idt-ddm.horizon:idt]], dtype=np.float32)
+		ddm_data_norm = torch.from_numpy(np.expand_dims(ddm_scaler.transform(ddm_data), axis=0)).float().cuda()
+		ddm_data = torch.from_numpy(np.expand_dims(ddm_data, axis=0)).float().cuda()
+		if ddm.is_rnn:
+			h = ddm.init_hidden(ddm_data.shape[0])
+			h = h.data
+			_, _, ddm_output = ddm(ddm_data, ddm_data_norm, h)
+		else:
+			_, _, ddm_output = ddm(ddm_data, ddm_data_norm)
 		ddm_output = ddm_output.cpu().detach().numpy()[0]
 		idx = 0
 		for param in ddm.sys_params:
@@ -163,16 +179,11 @@ for idt in range(n_steps-horizon):
 			idx += 1
 		dpm_model = Dynamic(**params)
 		nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, dpm_model, track, track_cons=TRACK_CONS)
-		# planner based on BayesOpt
-		xref, projidx = ConstantSpeed(x0=x0[:2], v0=x0[3], track=track, N=horizon, Ts=Ts, projidx=projidx)
 
 		start = tm.time()
 		umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
 		end = tm.time()
-		upp = purePursuit(x0, LD, KP, track, params)
 		inputs[:,idt] = umpc[:,0]
-		ddm_states[:,idt+1] = ddm_state.cpu().detach().numpy()
-		ddm_forces[:,idt+1] = np.squeeze(ddm_force, axis=1)
 	else:
 		start = tm.time()
 		upp = purePursuit(x0, LD, KP, track, params)
@@ -186,12 +197,12 @@ for idt in range(n_steps-horizon):
 	dstates[:,idt+1] = data_x
 	Ffy[idt+1], Frx[idt+1], Fry[idt+1] = model.calc_forces(states[:,idt], inputs[:,idt])
 
-	if idt > ddm.horizon:
+	if idt > 15:
 		# forward sim to predict over the horizon
 		hstates[:,0] = x0
 		hstates2[:,0] = x0
 		for idh in range(horizon):
-			x_next, data_x = model.sim_continuous(hstates[:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
+			x_next, data_x = dpm_model.sim_continuous(hstates[:,idh], umpc[:,idh].reshape(-1,1), [0, Ts], data_x)
 			hstates[:,idh+1] = x_next[:,-1]
 			hstates2[:,idh+1] = xmpc[:,idh+1]
 
@@ -232,7 +243,7 @@ plt.ioff()
 
 if SAVE_RESULTS:
 	np.savez(
-		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA"),
+		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA-MINUS-20"),
 		time=time,
 		states=states,
 		dstates=dstates,
