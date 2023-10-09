@@ -23,29 +23,20 @@ VEHICLE_SPECS:
   Iz: 1000.0
 MODEL:
   NAME: DeepPacejkaIAC
-  HORIZON: 1
+  HORIZON: 13
   LAYERS:
     - GRU:
-      OUT_FEATURES: 81
-      LAYERS: 8
+      OUT_FEATURES: 169
+      LAYERS: 4
     - DENSE:
-      OUT_FEATURES: 417
+      OUT_FEATURES: 406
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 417
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 417
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 417
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 417
+      OUT_FEATURES: 406
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 2
+    BATCH_SIZE: 128
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0001
+    LR: 0.000598

@@ -17,6 +17,9 @@ PARAMETERS:
   - Df:
     Min: 100.0
     Max: 10000.0
+  - Ef:
+    Min: -2.0
+    Max: 0.0
   - Br:
     Min: 5.0
     Max: 30.0
@@ -26,6 +29,9 @@ PARAMETERS:
   - Dr:
     Min: 100.0
     Max: 10000.0
+  - Er:
+    Min: -2.0
+    Max: 0.0
   - Cm1:
     Min: 0.0
     Max: 1000.0  
@@ -41,6 +47,18 @@ PARAMETERS:
   - Iz: 
     Min: 500.0
     Max: 2000.0
+  - Shf:
+    Min: -0.02
+    Max: 0.02
+  - Svf: 
+    Min: -300.0
+    Max: 300.0
+  - Shr:
+    Min: -0.02
+    Max: 0.02
+  - Svr:
+    Min: -300.0
+    Max: 300.0
 VEHICLE_SPECS:
   lf: 1.248
   lr: 1.7328
@@ -57,7 +75,7 @@ MODEL:
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 128
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0006
+    LR: 0.001

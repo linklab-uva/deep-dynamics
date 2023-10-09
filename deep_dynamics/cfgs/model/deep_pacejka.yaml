@@ -20,7 +20,7 @@ VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
-  Iz: 2.224e-5 #27.8e-6
+  Iz: 27.8e-6
 MODEL:
   NAME: DeepPacejka
   HORIZON: 15
@@ -60,7 +60,7 @@ MODEL:
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 8
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.000185
+    LR: 0.000197

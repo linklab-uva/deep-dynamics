@@ -52,7 +52,7 @@ def evaluate_predictions(model, test_data_loader, eval_coeffs):
                 output, _, sysid = model(inputs, norm_inputs)
                 end = time.time()
             inference_times.append(end-start)
-            # output = model.test_sys_params(inputs)
+            output = model.test_sys_params(inputs)
             test_loss = model.loss_function(output.squeeze(), labels.squeeze().float())
             error = output.squeeze() - labels.squeeze().float()
             error = np.abs(error.cpu().detach().numpy())

@@ -8,27 +8,27 @@ ACTIONS:
   - THROTTLE_CMD
   - STEERING_CMD
 PARAMETERS:
-  - Bf: 2.579
-    Min: 1.290
-    Max: 5.158
+  - Bf: 5.579
+    Min: 5.0
+    Max: 30.0
   - Cf: 1.2
-    Min: 0.6
-    Max: 2.4
+    Min: 0.5
+    Max: 2.0
   - Df: 0.192
-    Min: 0.096
-    Max: 0.384
+    Min: 0.1
+    Max: 0.9
   - Ef: 0.0
     Min: -2.0
     Max: 0.0
-  - Br: 3.3852
-    Min: 1.6926
-    Max: 6.7704
+  - Br: 5.3852
+    Min: 5.0
+    Max: 30.0
   - Cr: 1.2691
-    Min: 0.6345
-    Max: 2.5380
+    Min: 0.5
+    Max: 2.0
   - Dr: 0.1737
-    Min: 0.0869
-    Max: 0.3474
+    Min: 0.1
+    Max: 0.9
   - Er: 0.0
     Min: -2.0
     Max: 0.0
@@ -47,38 +47,41 @@ PARAMETERS:
   - Iz: 27.8e-6
     Min: 1.39e-5
     Max: 5.56e-5
+  - Shf:
+    Min: -0.02
+    Max: 0.02
+  - Svf: 
+    Min: -300.0
+    Max: 300.0
+  - Shr:
+    Min: -0.02
+    Max: 0.02
+  - Svr:
+    Min: -300.0
+    Max: 300.0
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 4
+  HORIZON: 8
   LAYERS:
     - GRU:
-      OUT_FEATURES: 16
-      LAYERS: 8
+      OUT_FEATURES: 64
+      LAYERS: 10
     - DENSE:
-      OUT_FEATURES: 299
+      OUT_FEATURES: 334
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 299
+      OUT_FEATURES: 334
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 299
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 299
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 299
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 299
+      OUT_FEATURES: 334
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 32
+    BATCH_SIZE: 4
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.001
+    LR: 0.0006
