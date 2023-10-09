@@ -17,9 +17,6 @@ PARAMETERS:
   - Df:
     Min: 100.0
     Max: 10000.0
-  - Ef:
-    Min: -2.0
-    Max: 0.0
   - Br:
     Min: 5.0
     Max: 30.0
@@ -29,9 +26,6 @@ PARAMETERS:
   - Dr:
     Min: 100.0
     Max: 10000.0
-  - Er:
-    Min: -2.0
-    Max: 0.0
   - Cm1:
     Min: 0.0
     Max: 1000.0  
@@ -52,49 +46,14 @@ VEHICLE_SPECS:
   lr: 1.7328
   mass: 790.0
 MODEL:
-<<<<<<< HEAD
   NAME: DeepDynamicsIAC
-  HORIZON: 5
-=======
-  NAME: DeepDynamics
-  HORIZON: 15
->>>>>>> ac62f5fa07a379c3d0d421cdae44cbac8ef8e9ce
+  HORIZON: 8
   LAYERS:
     - GRU:
-      OUT_FEATURES: 225
-      LAYERS: 15
+      OUT_FEATURES: 64
+      LAYERS: 6
     - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 258
+      OUT_FEATURES: 139
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE

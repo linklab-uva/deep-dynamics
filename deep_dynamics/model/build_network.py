@@ -14,7 +14,6 @@ string_to_torch = {
     "Mish": torch.nn.Mish,
     "Softplus": torch.nn.Softplus,
     "Sigmoid": torch.nn.Sigmoid,
-    "Linear": torch.nn.Linear,
     # Loss Functions
     "MSE" : torch.nn.MSELoss,
     "MAE" : torch.nn.SmoothL1Loss,

@@ -10,9 +10,11 @@ PARAMETERS:
   - Bf: 2.579
   - Cf: 1.2
   - Df: 0.192
+  - Ef: 0.0
   - Br: 3.3852
   - Cr: 1.2691
   - Dr: 0.1737
+  - Er: 0.0
   - Frx:
 VEHICLE_SPECS:
   lf: 0.029
@@ -21,22 +23,40 @@ VEHICLE_SPECS:
   Iz: 2.224e-5 #27.8e-6
 MODEL:
   NAME: DeepPacejka
-  HORIZON: 7
+  HORIZON: 15
   LAYERS:
-    - GRU:
-      OUT_FEATURES: 49
-      LAYERS: 11
+    # - GRU:
+    #   OUT_FEATURES: 49
+    #   LAYERS: 11
     - DENSE:
-      OUT_FEATURES: 289
+      OUT_FEATURES: 302
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 289 
+      OUT_FEATURES: 302 
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 289
+      OUT_FEATURES: 302
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 289 
+      OUT_FEATURES: 302 
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302 
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302 
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 302 
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE

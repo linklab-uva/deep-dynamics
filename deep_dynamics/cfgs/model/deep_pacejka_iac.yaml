@@ -10,22 +10,24 @@ PARAMETERS:
   - Bf: 
   - Cf: 
   - Df: 
+  - Ef:
   - Br: 
   - Cr: 
-  - Dr: 
+  - Dr:
+  - Er:
   - Frx:
 VEHICLE_SPECS:
   lf: 1.248
   lr: 1.7328
   mass: 790.0
-  Iz: 800.0
+  Iz: 1000.0
 MODEL:
   NAME: DeepPacejkaIAC
   HORIZON: 1
   LAYERS:
-    # - GRU:
-    #   OUT_FEATURES: 81
-    #   LAYERS: 8
+    - GRU:
+      OUT_FEATURES: 81
+      LAYERS: 8
     - DENSE:
       OUT_FEATURES: 417
       ACTIVATION: Mish

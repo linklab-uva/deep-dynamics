@@ -9,23 +9,29 @@ ACTIONS:
   - STEERING_CMD
 PARAMETERS:
   - Bf: 2.579
-    Min: 1.0
-    Max: 12.0
+    Min: 1.290
+    Max: 5.158
   - Cf: 1.2
-    Min: 1.0
-    Max: 2.0
+    Min: 0.6
+    Max: 2.4
   - Df: 0.192
-    Min: 0.1
-    Max: 1.9
+    Min: 0.096
+    Max: 0.384
+  - Ef: 0.0
+    Min: -2.0
+    Max: 0.0
   - Br: 3.3852
-    Min: 1.0
-    Max: 12.0
+    Min: 1.6926
+    Max: 6.7704
   - Cr: 1.2691
-    Min: 1.0
-    Max: 2.0
+    Min: 0.6345
+    Max: 2.5380
   - Dr: 0.1737
-    Min: 0.1
-    Max: 0.9
+    Min: 0.0869
+    Max: 0.3474
+  - Er: 0.0
+    Min: -2.0
+    Max: 0.0
   - Cm1: 0.287
     Min: 0.1435
     Max: 0.574
@@ -47,49 +53,28 @@ VEHICLE_SPECS:
   mass: 0.041
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 8
+  HORIZON: 4
   LAYERS:
     - GRU:
-      OUT_FEATURES: 64
-      LAYERS: 16
+      OUT_FEATURES: 16
+      LAYERS: 8
     - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 469
+      OUT_FEATURES: 299
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
