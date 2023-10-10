@@ -17,7 +17,7 @@ PARAMETERS:
   - Df: 0.192
     Min: 0.1
     Max: 0.9
-  - Ef: 0.0
+  - Ef: -0.083
     Min: -2.0
     Max: 0.0
   - Br: 5.3852
@@ -29,7 +29,7 @@ PARAMETERS:
   - Dr: 0.1737
     Min: 0.1
     Max: 0.9
-  - Er: 0.0
+  - Er: -0.019
     Min: -2.0
     Max: 0.0
   - Cm1: 0.287
@@ -47,16 +47,16 @@ PARAMETERS:
   - Iz: 27.8e-6
     Min: 1.39e-5
     Max: 5.56e-5
-  - Shf:
+  - Shf: -0.0013
     Min: -0.02
     Max: 0.02
-  - Svf: 
+  - Svf: 0.00043
     Min: -300.0
     Max: 300.0
-  - Shr:
+  - Shr: -0.00376
     Min: -0.02
     Max: 0.02
-  - Svr:
+  - Svr: 0.00091
     Min: -300.0
     Max: 300.0
 VEHICLE_SPECS:
