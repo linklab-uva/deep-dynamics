@@ -138,7 +138,7 @@ if __name__ == "__main__":
          print("Experiment already exists. Choose a different name")
          exit(0)
     train_dataset, val_dataset = dataset.split(0.85)
-    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=False, drop_last=True)
+    train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=model.batch_size, shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=model.batch_size, shuffle=False)
     with open(os.path.join(output_dir, "scaler.pkl"), "wb") as f:
         pickle.dump(dataset.scaler, f)

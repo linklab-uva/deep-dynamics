@@ -33,7 +33,7 @@ PARAMETERS:
     Min: -2.0
     Max: 0.0
   - Cm1:
-    Min: 0.0
+    Min: 100.0
     Max: 1000.0  
   - Cm2:
     Min: 0.0
