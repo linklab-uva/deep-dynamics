@@ -51,33 +51,42 @@ PARAMETERS:
     Min: -0.02
     Max: 0.02
   - Svf: 0.00043
-    Min: -300.0
-    Max: 300.0
+    Min: -0.003
+    Max: 0.003
   - Shr: -0.00376
     Min: -0.02
     Max: 0.02
   - Svr: 0.00091
-    Min: -300.0
-    Max: 300.0
+    Min: -0.003
+    Max: 0.003
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 8
+  HORIZON: 16
   LAYERS:
     - GRU:
+      OUT_FEATURES: 256
+      LAYERS: 2
+    - DENSE:
       OUT_FEATURES: 64
-      LAYERS: 10
-    - DENSE:
-      OUT_FEATURES: 334
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 334
+      OUT_FEATURES: 64
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 334
+      OUT_FEATURES: 64
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 64
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 64
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 64
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE

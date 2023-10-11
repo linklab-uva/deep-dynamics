@@ -15,6 +15,10 @@ PARAMETERS:
   - Cr: 
   - Dr:
   - Er:
+  - Svf:
+  - Shf:
+  - Svr:
+  - Shr:
   - Frx:
 VEHICLE_SPECS:
   lf: 1.248
