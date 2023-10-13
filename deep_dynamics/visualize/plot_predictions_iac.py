@@ -36,8 +36,8 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics_iac.yaml"
-state_dict = "../output/deep_dynamics_iac/11layers_258neurons_32batch_0.000930lr_15horizon_15gru/epoch_90.pth"
-dataset_file = "../data/LVMS_23_01_04_B.csv"
+state_dict = "../output/deep_dynamics_iac/1layers_399neurons_32batch_0.003574lr_8horizon_4gru/epoch_142.pth"
+dataset_file = "../data/Putnam_park2023_run2_1.csv"
 
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
@@ -46,7 +46,7 @@ ddm.to(device)
 ddm.eval()
 ddm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, ddm.horizon, save=False)
-samples = set(range(0, len(features), 500))
+samples = set(range(0, len(features), 200))
 print(samples)
 ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels)
 ddm_predictions = np.zeros((len(ddm_dataset)-HORIZON, 6, HORIZON+1))
@@ -79,9 +79,9 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 		ddm_predictions[idt,3,idh+1] = dxdt[0]
 		ddm_predictions[idt,4,idh+1] = dxdt[1]
 		ddm_predictions[idt,5,idh+1] = dxdt[2]
-		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -89,7 +89,7 @@ print("DDM Average Displacement Error:", average_displacement_error)
 print("DDM Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/5layers_417neurons_2batch_0.000100lr_3horizon_0gru/epoch_331.pth"
+state_dict = "../output/deep_pacejka_iac/3layers_97neurons_128batch_0.003450lr_9horizon_3gru/epoch_391.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -127,9 +127,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		dpm_predictions[idt,3,idh+1] = dxdt[0]
 		dpm_predictions[idt,4,idh+1] = dxdt[1]
 		dpm_predictions[idt,5,idh+1] = dxdt[2]
-		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(dpm_predictions)
 final_displacement_error /= len(dpm_predictions)
@@ -137,7 +137,7 @@ print("DPM (GT) Average Displacement Error:", average_displacement_error)
 print("DPM (GT) Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/more20/epoch_140.pth"
+state_dict = "../output/deep_pacejka_iac/plus20/epoch_385.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -175,9 +175,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		dpm_plus_predictions[idt,3,idh+1] = dxdt[0]
 		dpm_plus_predictions[idt,4,idh+1] = dxdt[1]
 		dpm_plus_predictions[idt,5,idh+1] = dxdt[2]
-		displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(dpm_plus_predictions)
 final_displacement_error /= len(dpm_plus_predictions)
@@ -185,7 +185,7 @@ print("DPM (+20) Average Displacement Error:", average_displacement_error)
 print("DPM (+20) Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/less20/epoch_73.pth"
+state_dict = "../output/deep_pacejka_iac/minus20/epoch_183.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -223,14 +223,14 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		dpm_minus_predictions[idt,3,idh+1] = dxdt[0]
 		dpm_minus_predictions[idt,4,idh+1] = dxdt[1]
 		dpm_minus_predictions[idt,5,idh+1] = dxdt[2]
-		displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(dpm_minus_predictions)
 final_displacement_error /= len(dpm_minus_predictions)
-print("DPM (+20) Average Displacement Error:", average_displacement_error)
-print("DPM (+20) Final Displacement Error:", final_displacement_error)
+print("DPM (-20) Average Displacement Error:", average_displacement_error)
+print("DPM (-20) Final Displacement Error:", final_displacement_error)
 
 #####################################################################
 # plots
@@ -241,15 +241,15 @@ matplotlib.rc('font', **font)
 for idx in samples:
 	plt.figure(figsize=(12,8))
 	plt.axis('equal')
-	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
-	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	# plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	# plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
 	plt.plot(poses[idx-500:idx+500,0], poses[idx-500:idx+500:,1], 'b', lw=1)
 	plt.plot(poses[idx:idx+HORIZON+1,0], poses[idx:idx+HORIZON+1,1], '--bo', lw=1, label='Ground Truth')
 	plt.xlabel('$x$ [m]')
 	plt.ylabel('$y$ [m]')
 	plt.plot(ddm_predictions[idx, 0, :], ddm_predictions[idx, 1, :], '--go', label="Deep Dynamics")
 	plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka (GT)")
-	plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--bo', label="Deep Pacejka (+20)")
+	plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co', label="Deep Pacejka (+20)")
 	plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo', label="Deep Pacejka (-20)")
 	plt.legend(loc='upper center', ncol=2, frameon=False)
 	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 10.0, np.max(ddm_predictions[idx,0,:]) + 10.0)

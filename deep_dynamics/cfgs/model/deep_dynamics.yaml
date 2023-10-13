@@ -65,32 +65,62 @@ VEHICLE_SPECS:
   mass: 0.041
 MODEL:
   NAME: DeepDynamics
-  HORIZON: 16
+  HORIZON: 5
   LAYERS:
     - GRU:
-      OUT_FEATURES: 256
-      LAYERS: 2
+      OUT_FEATURES: 25
+      LAYERS: 7
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 64
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 32
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
     LR: 0.0006

@@ -34,7 +34,7 @@ TRACK_CONS = False
 # default settings
 
 SAMPLING_TIME = 0.02
-HORIZON = 15
+HORIZON = 13
 COST_Q = np.diag([1, 1])
 COST_P = np.diag([0, 0])
 COST_R = np.diag([5/1000, 1])
@@ -63,8 +63,8 @@ model = Dynamic(**params)
 # deep dynamics parameters
 
 param_file = "../cfgs/model/deep_pacejka.yaml"
-# state_dict = "../output/deep_pacejka/4layers_289neurons_4batch_0.000185lr_7horizon_11gru/epoch_398.pth"
-state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
+state_dict = "../output/deep_pacejka/2layers_108neurons_16batch_0.002812lr_10horizon_8gru/epoch_385.pth"
+# state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
 # state_dict = "../output/deep_pacejka/plus20/epoch_247.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
@@ -175,7 +175,11 @@ for idt in range(n_steps-horizon):
 		ddm_output = ddm_output.cpu().detach().numpy()[0]
 		idx = 0
 		for param in ddm.sys_params:
-			params[param] = ddm_output[idx]
+			if 'E' in param:
+				params[param] = -np.abs(ddm_output[idx])
+			else:
+				params[param] = np.abs(ddm_output[idx])
+			print(param, ddm_output[idx])
 			idx += 1
 		dpm_model = Dynamic(**params)
 		nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, dpm_model, track, track_cons=TRACK_CONS)
@@ -183,7 +187,9 @@ for idt in range(n_steps-horizon):
 		start = tm.time()
 		umpc, fval, xmpc = nlp.solve(x0=x0, xref=xref[:2,:], uprev=uprev)
 		end = tm.time()
-		inputs[:,idt] = umpc[:,0]
+		upp = purePursuit(x0, LD, KP, track, params)
+		inputs[0,idt] = upp[0]
+		inputs[1,idt] = umpc[1,0]
 	else:
 		start = tm.time()
 		upp = purePursuit(x0, LD, KP, track, params)
@@ -243,7 +249,7 @@ plt.ioff()
 
 if SAVE_RESULTS:
 	np.savez(
-		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA-MINUS-20"),
+		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA-TEST"),
 		time=time,
 		states=states,
 		dstates=dstates,

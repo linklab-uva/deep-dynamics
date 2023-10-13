@@ -65,13 +65,13 @@ VEHICLE_SPECS:
   mass: 790.0
 MODEL:
   NAME: DeepDynamicsIAC
-  HORIZON: 8
+  HORIZON: 11
   LAYERS:
     - GRU:
-      OUT_FEATURES: 64
-      LAYERS: 6
+      OUT_FEATURES: 121
+      LAYERS: 1
     - DENSE:
-      OUT_FEATURES: 139
+      OUT_FEATURES: 259
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
