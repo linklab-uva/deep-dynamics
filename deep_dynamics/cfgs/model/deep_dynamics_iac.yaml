@@ -34,16 +34,16 @@ PARAMETERS:
     Max: 0.0
   - Cm1:
     Min: 100.0
-    Max: 1000.0  
+    Max: 10000.0  
   - Cm2:
     Min: 0.0
     Max: 1.0
   - Cr0:
-    Min: 0.348
-    Max: 1.392
+    Min: 0.1
+    Max: 1.4
   - Cr2:
-    Min: 0.179
-    Max: 0.718
+    Min: 0.1
+    Max: 1.0
   - Iz: 
     Min: 500.0
     Max: 2000.0
@@ -65,13 +65,16 @@ VEHICLE_SPECS:
   mass: 790.0
 MODEL:
   NAME: DeepDynamicsIAC
-  HORIZON: 11
+  HORIZON: 15
   LAYERS:
     - GRU:
-      OUT_FEATURES: 121
-      LAYERS: 1
+      OUT_FEATURES: 225
+      LAYERS: 3
     - DENSE:
-      OUT_FEATURES: 259
+      OUT_FEATURES: 188
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 188
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
