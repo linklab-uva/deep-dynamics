@@ -55,7 +55,7 @@ def tune_hyperparams(hyperparam_config, model_cfg, log_wandb):
             os.mkdir(output_dir)
     data_npy = np.load(dataset_file)
     dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"])
-    train_dataset, val_dataset = dataset.split(0.85)
+    train_dataset, val_dataset = dataset.split(0.8)
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=hyperparam_config["batch_size"], shuffle=True, drop_last=True)
     val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=hyperparam_config["batch_size"], shuffle=False)
     param_dict["MODEL"]["LAYERS"] = []
