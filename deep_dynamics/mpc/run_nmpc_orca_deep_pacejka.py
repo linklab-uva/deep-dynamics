@@ -63,9 +63,10 @@ model = Dynamic(**params)
 # deep dynamics parameters
 
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/2layers_108neurons_16batch_0.002812lr_10horizon_8gru/epoch_385.pth"
-# state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
-# state_dict = "../output/deep_pacejka/plus20/epoch_247.pth"
+# state_dict = "../output/deep_pacejka/2layers_108neurons_16batch_0.002812lr_10horizon_8gru/epoch_385.pth"
+state_dict = "../output/deep_pacejka/minus20/epoch_364.pth"
+params["Iz"] *= 0.8
+# state_dict = "../output/deep_pacejka/plus20/epoch_344.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -179,7 +180,6 @@ for idt in range(n_steps-horizon):
 				params[param] = -np.abs(ddm_output[idx])
 			else:
 				params[param] = np.abs(ddm_output[idx])
-			print(param, ddm_output[idx])
 			idx += 1
 		dpm_model = Dynamic(**params)
 		nlp = setupNLP(horizon, Ts, COST_Q, COST_P, COST_R, params, dpm_model, track, track_cons=TRACK_CONS)
@@ -240,8 +240,11 @@ for idt in range(n_steps-horizon):
 		ddm_states[:,idt+1] = x_next[3:,-1]
 		ddm_forces[:,idt+1] = np.array([Ffy[idt+1], Frx[idt+1], Fry[idt+1]])
 
+	if states[0,idt] > 1.2 and idt > 200:
+		print("Lap Time:", Ts * idt)
+		break
 	plt.pause(Ts/100)
-
+print("Average Speed:", np.mean(states[3,:idt]))
 plt.ioff()
 
 #####################################################################
@@ -249,7 +252,7 @@ plt.ioff()
 
 if SAVE_RESULTS:
 	np.savez(
-		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA-TEST"),
+		'../data/DYN-NMPC-{}{}-{}.npz'.format(SUFFIX, TRACK_NAME, "DEEP-PACEJKA-MINUS-20"),
 		time=time,
 		states=states,
 		dstates=dstates,
