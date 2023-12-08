@@ -17,5 +17,9 @@ classifiers = [
 dependencies = [
     "matplotlib",
     "numpy",
+    "torch",
+    "wandb",
+    "ray[tune]",
+    "scikit-learn"
 ]
 dynamic = ["version"]
