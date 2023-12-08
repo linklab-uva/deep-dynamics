@@ -221,8 +221,11 @@ for idt in range(n_steps-horizon):
 	else:
 		ddm_states[:,idt+1] = x_next[3:,-1]
 		ddm_forces[:,idt+1] = np.array([Ffy[idt+1], Frx[idt+1], Fry[idt+1]])
+	if states[0,idt] > 1.2 and idt > 100:
+		print("Lap Time:", Ts * idt)
+		break
 	plt.pause(Ts/100)
-
+print("Average Speed:", np.mean(states[3,:idt]))
 plt.ioff()
 
 #####################################################################
