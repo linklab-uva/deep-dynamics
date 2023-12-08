@@ -7,30 +7,32 @@ from deep_dynamics.model.models import string_to_dataset, string_to_model
 from deep_dynamics.model.train import train
 from ray import tune
 import pickle
+from ray.tune.search.optuna import OptunaSearch
 from ray.tune.schedulers import ASHAScheduler
 
 def main(model_cfg, log_wandb):
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     config = {
-        "layers" : tune.choice(range(1,17)),
-        "neurons" : tune.randint(16, 512),
-        "batch_size": tune.choice([2, 4, 8, 16, 32]),
-        "lr" : tune.loguniform(1e-4, 1e-3),
+        "layers" : tune.choice(range(1,9)),
+        "neurons" : tune.randint(4, 256),
+        "batch_size": tune.choice([16, 32, 64, 128]),
+        "lr" : tune.uniform(1e-4, 1e-2),
         "horizon": tune.choice(range(1,17)),
-        "gru_layers": tune.choice(range(17)),
+        "gru_layers": tune.choice(range(9))
     }
 
     scheduler = ASHAScheduler(
         time_attr='training_iteration',
-        metric='loss',
-        mode='min',
         max_t=400,
         grace_period=100,
     )
     result = tune.run(
         partial(tune_hyperparams, model_cfg=model_cfg, log_wandb=log_wandb),
-        resources_per_trial={"cpu": 1.0, "gpu": 1/8},
+        metric='loss',
+        mode='min',
+        search_alg=OptunaSearch(),
+        resources_per_trial={"cpu": 1, "gpu": 1/9},
         config=config,
         num_samples=200,
         scheduler=scheduler,

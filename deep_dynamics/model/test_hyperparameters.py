@@ -30,10 +30,12 @@ def test_hyperparams(model_cfg, log_wandb):
                 previous_c_digit = False
         layers = int(hyperparam_values[0])
         neurons = int(hyperparam_values[1])
+        batch_size = int(hyperparam_values[2])
+        learning_rate = float(hyperparam_values[3])
         horizon = int(hyperparam_values[4])
         gru_layers = int(hyperparam_values[5])
-        # dataset_file = "../data/LVMS_23_01_04_B_{}.npz".format(horizon)
-        dataset_file = "../data/DYN-PP-ETHZMobil_{}.npz".format(horizon)
+        dataset_file = "../data/LVMS_23_01_04_A_{}.npz".format(horizon)
+        # dataset_file = "../data/DYN-PP-ETHZMobil_{}.npz".format(horizon)
         # dataset_file = "../data/DYN-PP-ETHZ_{}.npz".format(horizon)
         with open(model_cfg, 'rb') as f:
             param_dict = yaml.load(f, Loader=yaml.SafeLoader)
@@ -41,6 +43,8 @@ def test_hyperparams(model_cfg, log_wandb):
         with open(os.path.join("../output/{}".format(model_name), dir, "scaler.pkl"), "rb") as f:
             scaler = pickle.load(f)
         test_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scaler)
+        # dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](data_npy["features"], data_npy["labels"], scaler)
+        # train_dataset, test_dataset = dataset.split(0.85)
         param_dict["MODEL"]["LAYERS"] = []
         if gru_layers:
             layer = dict()
@@ -55,6 +59,8 @@ def test_hyperparams(model_cfg, log_wandb):
             layer["ACTIVATION"] = "Mish"
             param_dict["MODEL"]["LAYERS"].append(layer)
         param_dict["MODEL"]["HORIZON"] = horizon
+        param_dict["MODEL"]["OPTIMIZATION"]["BATCH_SIZE"] = batch_size
+        param_dict["MODEL"]["OPTIMIZATION"]["LR"] = learning_rate
         model = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
         try:
             model_file = sorted(os.listdir("../output/{}/{}".format(model_name, dir)), key=numbers)[-1]

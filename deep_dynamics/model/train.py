@@ -1,5 +1,5 @@
 import wandb
-from ray.air import Checkpoint, session
+from ray import train as raytrain
 from deep_dynamics.model.models import DeepDynamicsModel, DeepDynamicsDataset, DeepPacejkaModel
 from deep_dynamics.model.models import string_to_model, string_to_dataset
 import torch
@@ -101,11 +101,10 @@ def train(model, train_data_loader, val_data_loader, experiment_name, log_wandb,
                 "net_state_dict": model.state_dict(),
                 "optimizer_state_dict": model.optimizer.state_dict(),
             }
-            checkpoint = Checkpoint.from_dict(checkpoint_data)
+            # checkpoint = Checkpoint.from_dict(checkpoint_data)
             _val_loss = np.inf
-            session.report(
+            raytrain.report(
                 {"loss": mean_train_loss},
-                checkpoint=checkpoint,
             )
         if np.isnan(mean_val_loss):
             break    
