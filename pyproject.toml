@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deep_dynamics"
+authors = [
+    {name = "John Chrosniak", email = "jlc9wr@virginia.edu"},
+]
+description = "Deep dynamics"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "TODO"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "matplotlib",
+    "numpy",
+]
+dynamic = ["version"]

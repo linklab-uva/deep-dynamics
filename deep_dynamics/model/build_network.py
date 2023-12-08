@@ -13,6 +13,7 @@ string_to_torch = {
     "ReLU": torch.nn.ReLU,
     "Mish": torch.nn.Mish,
     "Softplus": torch.nn.Softplus,
+    "Sigmoid": torch.nn.Sigmoid,
     # Loss Functions
     "MSE" : torch.nn.MSELoss,
     "MAE" : torch.nn.SmoothL1Loss,
@@ -27,17 +28,13 @@ def build_network(param_dict):
     horizon = param_dict["MODEL"]["HORIZON"]
     num_states = len(param_dict["STATE"])
     num_actions = len(param_dict["ACTIONS"])
-    num_parameters = len(param_dict["PARAMETERS"])
     layers = []
     for i in range(len(param_dict["MODEL"]["LAYERS"])):
         if i == 0:
             input_size = (num_states + num_actions) * horizon
         else:
             input_size = param_dict["MODEL"]["LAYERS"][i-1]["OUT_FEATURES"]
-        if i == len(param_dict["MODEL"]["LAYERS"]) - 1:
-            output_size = num_parameters
-        else:
-            output_size = param_dict["MODEL"]["LAYERS"][i]["OUT_FEATURES"]
+        output_size = param_dict["MODEL"]["LAYERS"][i]["OUT_FEATURES"]
         module = create_module(list(param_dict["MODEL"]["LAYERS"][i].keys())[0], input_size, horizon, output_size, param_dict["MODEL"]["LAYERS"][i].get("LAYERS"), param_dict["MODEL"]["LAYERS"][i].get("ACTIVATION"))
         layers += module
     return layers

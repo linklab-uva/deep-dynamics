@@ -2,48 +2,41 @@ STATE:
   - VX
   - VY
   - YAW_RATE
-  - THROTTLE_FB
   - STEERING_FB
 ACTIONS:
-  - THROTTLE_CMD
   - STEERING_CMD
+  - VREF
 PARAMETERS:
   - Bf: 2.579
   - Cf: 1.2
   - Df: 0.192
+  - Ef: 0.0
   - Br: 3.3852
   - Cr: 1.2691
   - Dr: 0.1737
-  - Cm1: 0.287
-  - Cm2: 0.0545
-  - Cr0: 0.0518
-  - Cr2: 0.00035
-  - Izz: 27.8e-6
+  - Er: 0.0
+  - Frx:
 VEHICLE_SPECS:
   lf: 0.029
   lr: 0.033
   mass: 0.041
+  Iz: 27.8e-6
 MODEL:
-  NAME: DeepDynamics
-  HORIZON: 15
+  NAME: DeepPacejka
+  HORIZON: 10
   LAYERS:
     - GRU:
-      OUT_FEATURES: 225
-      LAYERS: 15
+      OUT_FEATURES: 100
+      LAYERS: 8
     - DENSE:
-      OUT_FEATURES: 280
+      OUT_FEATURES: 108
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 280
+      OUT_FEATURES: 108
       ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 280
-      ACTIVATION: Mish
-    - DENSE:
-      ACTIVATION: Softplus
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 4
+    BATCH_SIZE: 16
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.0002
+    LR: 0.002812

@@ -1,0 +1,39 @@
+STATE:
+  - VX
+  - VY
+  - YAW_RATE
+  - STEERING_FB
+ACTIONS:
+  - STEERING_CMD
+  - VREF
+PARAMETERS:
+  - Bf: 
+  - Cf: 
+  - Df: 
+  - Ef:
+  - Br: 
+  - Cr: 
+  - Dr:
+  - Er:
+  - Frx:
+VEHICLE_SPECS:
+  lf: 1.248
+  lr: 1.7328
+  mass: 790.0
+  Iz: 1000.0
+MODEL:
+  NAME: DeepPacejkaIAC
+  HORIZON: 16
+  LAYERS:
+    - GRU:
+      OUT_FEATURES: 256
+      LAYERS: 5
+    - DENSE:
+      OUT_FEATURES: 254
+      ACTIVATION: Mish
+  OPTIMIZATION:
+    LOSS: MSE
+    BATCH_SIZE: 128
+    NUM_EPOCHS: 400
+    OPTIMIZER: Adam
+    LR: 0.000439

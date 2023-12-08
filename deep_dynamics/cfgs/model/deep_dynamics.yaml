@@ -1,0 +1,126 @@
+STATE:
+  - VX
+  - VY
+  - YAW_RATE
+  - THROTTLE_FB
+  - STEERING_FB
+ACTIONS:
+  - THROTTLE_CMD
+  - STEERING_CMD
+PARAMETERS:
+  - Bf: 5.579
+    Min: 5.0
+    Max: 30.0
+  - Cf: 1.2
+    Min: 0.5
+    Max: 2.0
+  - Df: 0.192
+    Min: 0.1
+    Max: 0.9
+  - Ef: -0.083
+    Min: -2.0
+    Max: 0.0
+  - Br: 5.3852
+    Min: 5.0
+    Max: 30.0
+  - Cr: 1.2691
+    Min: 0.5
+    Max: 2.0
+  - Dr: 0.1737
+    Min: 0.1
+    Max: 0.9
+  - Er: -0.019
+    Min: -2.0
+    Max: 0.0
+  - Cm1: 0.287
+    Min: 0.1435
+    Max: 0.574
+  - Cm2: 0.0545
+    Min: 0.02725
+    Max: 0.109
+  - Cr0: 0.0518
+    Min: 0.0259
+    Max: 0.1036
+  - Cr2: 0.00035
+    Min: 1.75e-4
+    Max: 7.0e-4
+  - Iz: 27.8e-6
+    Min: 1.39e-5
+    Max: 5.56e-5
+  - Shf: -0.0013
+    Min: -0.02
+    Max: 0.02
+  - Svf: 0.00043
+    Min: -0.003
+    Max: 0.003
+  - Shr: -0.00376
+    Min: -0.02
+    Max: 0.02
+  - Svr: 0.00091
+    Min: -0.003
+    Max: 0.003
+VEHICLE_SPECS:
+  lf: 0.029
+  lr: 0.033
+  mass: 0.041
+MODEL:
+  NAME: DeepDynamics
+  HORIZON: 5
+  LAYERS:
+    - GRU:
+      OUT_FEATURES: 25
+      LAYERS: 7
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+    - DENSE:
+      OUT_FEATURES: 436
+      ACTIVATION: Mish
+  OPTIMIZATION:
+    LOSS: MSE
+    BATCH_SIZE: 32
+    NUM_EPOCHS: 400
+    OPTIMIZER: Adam
+    LR: 0.0006
