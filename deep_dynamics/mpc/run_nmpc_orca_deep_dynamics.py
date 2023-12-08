@@ -34,7 +34,7 @@ TRACK_CONS = False
 # default settings
 
 SAMPLING_TIME = 0.02
-HORIZON = 15
+HORIZON = 13
 COST_Q = np.diag([1, 1])
 COST_P = np.diag([0, 0])
 COST_R = np.diag([5/1000, 1])
@@ -56,7 +56,7 @@ model = Dynamic(**params)
 # deep dynamics parameters
 
 param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/13layers_469neurons_4batch_0.000194lr_8horizon_16gru/epoch_106.pth"
+state_dict = "../output/deep_dynamics/16layers_436neurons_2batch_0.000144lr_5horizon_7gru/epoch_385.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
@@ -221,8 +221,11 @@ for idt in range(n_steps-horizon):
 	else:
 		ddm_states[:,idt+1] = x_next[3:,-1]
 		ddm_forces[:,idt+1] = np.array([Ffy[idt+1], Frx[idt+1], Fry[idt+1]])
+	if states[0,idt] > 1.2 and idt > 100:
+		print("Lap Time:", Ts * idt)
+		break
 	plt.pause(Ts/100)
-
+print("Average Speed:", np.mean(states[3,:idt]))
 plt.ioff()
 
 #####################################################################

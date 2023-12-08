@@ -15,10 +15,6 @@ PARAMETERS:
   - Cr: 1.2691
   - Dr: 0.1737
   - Er: 0.0
-  - Svf:
-  - Shf:
-  - Svr:
-  - Shr:
   - Frx:
 VEHICLE_SPECS:
   lf: 0.029
@@ -27,44 +23,20 @@ VEHICLE_SPECS:
   Iz: 27.8e-6
 MODEL:
   NAME: DeepPacejka
-  HORIZON: 15
+  HORIZON: 10
   LAYERS:
-    # - GRU:
-    #   OUT_FEATURES: 49
-    #   LAYERS: 11
+    - GRU:
+      OUT_FEATURES: 100
+      LAYERS: 8
     - DENSE:
-      OUT_FEATURES: 302
+      OUT_FEATURES: 108
       ACTIVATION: Mish
     - DENSE:
-      OUT_FEATURES: 302 
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302 
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302 
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302 
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302
-      ACTIVATION: Mish
-    - DENSE:
-      OUT_FEATURES: 302 
+      OUT_FEATURES: 108
       ACTIVATION: Mish
   OPTIMIZATION:
     LOSS: MSE
-    BATCH_SIZE: 8
+    BATCH_SIZE: 16
     NUM_EPOCHS: 400
     OPTIMIZER: Adam
-    LR: 0.000197
+    LR: 0.002812

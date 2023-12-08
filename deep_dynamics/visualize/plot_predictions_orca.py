@@ -38,7 +38,7 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/13layers_469neurons_4batch_0.000194lr_8horizon_16gru/epoch_106.pth"
+state_dict = "../output/deep_dynamics/16layers_436neurons_2batch_0.000144lr_5horizon_7gru/epoch_385.pth"
 dataset_file = "../data/DYN-NMPC-NOCONS-ETHZMobil.npz"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	ddm_scaler = pickle.load(f)
@@ -55,7 +55,7 @@ for i in range(len(poses)): ## Odometry set to 0 when lap is finished
 	if poses[i,0] == 0.0 and poses[i,1] == 0.0:
 		stop_idx = i
 		break
-samples = list(range(50, 300, 50))
+samples = list(range(50, 275, 25))
 driving_inputs = features[:,0,3:5] + features[:,0,5:7]
 ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, ddm_scaler)
 ddm_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
@@ -89,9 +89,9 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 		# Predict over horizon
 		ddm_next, _ = ddm_model.sim_continuous(ddm_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		ddm_predictions[idt,:,idh+1] = ddm_next[:,-1]
-		displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -101,7 +101,7 @@ print("DDM Final Displacement Error:", final_displacement_error)
 	
 # DPM GT
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/4layers_289neurons_4batch_0.000185lr_7horizon_11gru/epoch_398.pth"
+state_dict = "../output/deep_pacejka/2layers_108neurons_16batch_0.002812lr_10horizon_8gru/epoch_385.pth"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
@@ -142,9 +142,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -153,7 +153,7 @@ print("DPM GT Final Displacement Error:", final_displacement_error)
 
 # DPM Iz + 20%
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/plus20/epoch_247.pth"
+state_dict = "../output/deep_pacejka/plus20/epoch_344.pth"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
@@ -196,9 +196,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_plus_pred
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_plus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_plus_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -207,7 +207,7 @@ print("DPM +20 Final Displacement Error:", final_displacement_error)
 
 # DPM Iz - 20%
 param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/minus20/epoch_376.pth"
+state_dict = "../output/deep_pacejka/minus20/epoch_364.pth"
 param_dict["VEHICLE_SPECS"]["Iz"] *= 0.8
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
@@ -250,9 +250,9 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_minus_pre
 		# Predict over horizon
 		dpm_next, _ = dpm_model.sim_continuous(dpm_minus_predictions[idt,:,idh], driving_inputs[idt+idh].reshape(-1,1), [0, Ts], np.zeros((8,1)))
 		dpm_minus_predictions[idt,:,idh+1] = dpm_next[:,-1]
-		displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+		displacement_error += np.sum(np.linalg.norm(dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
-	final_displacement_error += np.sum((dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2])**2)
+	final_displacement_error += np.sum(np.linalg.norm(dpm_minus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -269,7 +269,7 @@ plt.figure(figsize=(12,8))
 plt.axis('equal')
 plt.plot(track.x_outer, track.y_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(track.x_inner, track.y_inner, 'k', lw=0.5, alpha=0.5)
-plt.plot(poses[:300,0], poses[:300,1], 'b', lw=1)
+plt.plot(poses[:260,0], poses[:260,1], 'b', lw=1)
 legend_initialized = False
 for idx in samples:
 	if not legend_initialized:
@@ -278,6 +278,8 @@ for idx in samples:
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka (GT)")
 		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co', label="Deep Pacejka (+20%)")
 		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo', label="Deep Pacejka (-20%)")
+		plt.plot(poses[idx,0], poses[idx,1], 'bo')
+		plt.text(poses[idx,0]-0.05, poses[idx,1]+0.05, "%.1f" % float(idx*Ts), color='b', fontsize=18, ha='right', va='top')
 		legend_initialized = True
 	else:
 		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo')
@@ -285,6 +287,8 @@ for idx in samples:
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
 		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co')
 		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo')
+		plt.plot(poses[idx,0], poses[idx,1], 'bo')
+		plt.text(poses[idx,0]-0.05, poses[idx,1]+0.05, "%.1f" % float(idx*Ts), color='b', fontsize=18, ha='right', va='top')
 
 plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
 plt.show()

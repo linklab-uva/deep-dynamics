@@ -2,50 +2,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import matplotlib
-
-from bayes_race.tracks import ETHZMobil
-from bayes_race.models import Dynamic
-from bayes_race.params import ORCA
-import torch
-import yaml
+import matplotlib.animation as animation 
+import csv
 import os
+import yaml
+import torch
 import pickle
 from tqdm import tqdm
 from deep_dynamics.model.models import string_to_model, string_to_dataset
-from deep_dynamics.tools.bayesrace_parser import write_dataset
+from deep_dynamics.tools.csv_parser import write_dataset
 
-#####################################################################
-# settings
-
-SAVE_RESULTS = False
-
-Ts = 0.02
+Ts = 0.04
 HORIZON = 15
 
 #####################################################################
 # load track
-
-N_SAMPLES = 300
-TRACK_NAME = 'ETHZMobil'
-track = ETHZMobil(reference='optimal', longer=True)
-
+TRACK_NAME = "lvms"
+inner_bounds = []
+with open("tracks/" + TRACK_NAME + "_inner_bound.csv") as f:
+	reader = csv.reader(f, delimiter=',')
+	for row in reader:
+		inner_bounds.append([float(row[0]), float(row[1])])
+outer_bounds = []
+with open("tracks/" + TRACK_NAME + "_outer_bound.csv") as f:
+	reader = csv.reader(f, delimiter=',')
+	for row in reader:
+		outer_bounds.append([float(row[0]), float(row[1])])
+inner_bounds = np.array(inner_bounds, dtype=np.float32)
+outer_bounds = np.array(outer_bounds, dtype=np.float32)
 #####################################################################
 # load inputs used to simulate Dynamic model
-
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
 
-param_file = "../cfgs/model/deep_dynamics.yaml"
-state_dict = "../output/deep_dynamics/16layers_436neurons_2batch_0.000144lr_5horizon_7gru/epoch_385.pth"
-dataset_file = "../data/DYN-PP-ETHZMobil.npz"
-with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
-	ddm_scaler = pickle.load(f)
-
+param_file = "../cfgs/model/deep_dynamics_iac.yaml"
+state_dict = "../output/deep_dynamics_iac/2layers_188neurons_64batch_0.001914lr_15horizon_3gru/epoch_53.pth"
+dataset_file = "../data/LVMS_23_01_04_A.csv"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	ddm_scaler = pickle.load(f)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 ddm.to(device)
 ddm.eval()
@@ -61,8 +60,6 @@ driving_inputs = features[:,0,3:5] + features[:,0,5:7]
 ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, ddm_scaler)
 ddm_predictions = np.zeros((stop_idx, 3))
 ddm_data_loader = torch.utils.data.DataLoader(ddm_dataset, batch_size=1, shuffle=False)
-params = ORCA(control='pwm')
-ddm_model = Dynamic(**params)
 idt = 0
 states = np.zeros((stop_idx, 3))
 for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictions)):
@@ -85,8 +82,8 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 
 	
 # DPM GT
-param_file = "../cfgs/model/deep_pacejka.yaml"
-state_dict = "../output/deep_pacejka/2layers_108neurons_16batch_0.002812lr_10horizon_8gru/epoch_385.pth"
+param_file = "../cfgs/model/deep_pacejka_iac.yaml"
+state_dict = "../output/deep_pacejka_iac/plus20/epoch_391.pth"
 with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 	dpm_scaler = pickle.load(f)
 with open(param_file, 'rb') as f:
@@ -98,8 +95,6 @@ features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
 dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, dpm_scaler)
 dpm_predictions = np.zeros((stop_idx, 3))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
-params = ORCA(control='pwm')
-dpm_model = Dynamic(**params)
 idt = 0
 for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictions)):
 	if idt == len(dpm_predictions):
@@ -151,15 +146,12 @@ ax[0,2].set(title="$\omega$ ($rad/s$)")
 ax[1,0].plot(time, np.abs(states[:,0] - ddm_predictions[:,0]), '--g')
 ax[1,0].plot(time, np.abs(states[:,0] - dpm_predictions[:,0]), '--r')
 ax[1,0].set(ylabel="Error", xlabel="Time (s)")
-ax[1,0].set_yscale("log")
 ax[1,1].plot(time, np.abs(states[:,1] - ddm_predictions[:,1]), '--g')
 ax[1,1].plot(time, np.abs(states[:,1] - dpm_predictions[:,1]), '--r')
 ax[1,1].set(xlabel="Time (s)")
-ax[1,1].set_yscale("log")
 ax[1,2].plot(time, np.abs(states[:,2] - ddm_predictions[:,2]), '--g')
 ax[1,2].plot(time, np.abs(states[:,2] - dpm_predictions[:,2]), '--r')
 ax[1,2].set(xlabel="Time (s)")
-ax[1,2].set_yscale("log")
 
 handles, labels = ax[0,0].get_legend_handles_labels()
 fig.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.0), frameon=False)
