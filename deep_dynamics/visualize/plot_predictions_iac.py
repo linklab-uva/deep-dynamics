@@ -2,7 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import matplotlib
+import matplotlib.animation as animation 
 import csv
+import os
+import pickle
 import yaml
 import torch
 from tqdm import tqdm
@@ -36,20 +39,21 @@ else:
     device = torch.device("cpu")
 
 param_file = "../cfgs/model/deep_dynamics_iac.yaml"
-state_dict = "../output/deep_dynamics_iac/1layers_399neurons_32batch_0.003574lr_8horizon_4gru/epoch_142.pth"
-dataset_file = "../data/Putnam_park2023_run2_1.csv"
-
+state_dict = "../output/deep_dynamics_iac/2layers_188neurons_64batch_0.001914lr_15horizon_3gru/epoch_53.pth"
+dataset_file = "../data/LVMS_23_01_04_A.csv"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	ddm_scaler = pickle.load(f)
 ddm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 ddm.to(device)
 ddm.eval()
 ddm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, ddm.horizon, save=False)
-samples = set(range(0, len(features), 200))
-print(samples)
-ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels)
+ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features[:3000], labels[:3000], ddm_scaler)
 ddm_predictions = np.zeros((len(ddm_dataset)-HORIZON, 6, HORIZON+1))
+ddm_ades = np.zeros(len(ddm_dataset))
+ddm_fdes = np.zeros(len(ddm_dataset))
 ddm_data_loader = torch.utils.data.DataLoader(ddm_dataset, batch_size=1, shuffle=False)
 idt = 0
 average_displacement_error = 0.0
@@ -82,6 +86,8 @@ for inputs, labels, norm_inputs in tqdm(ddm_data_loader, total=len(ddm_predictio
 		displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
 	final_displacement_error += np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
+	ddm_ades[idt] = displacement_error / HORIZON
+	ddm_fdes[idt] = np.sum(np.linalg.norm(ddm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(ddm_predictions)
 final_displacement_error /= len(ddm_predictions)
@@ -89,15 +95,19 @@ print("DDM Average Displacement Error:", average_displacement_error)
 print("DDM Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/3layers_97neurons_128batch_0.003450lr_9horizon_3gru/epoch_391.pth"
+state_dict = "../output/deep_pacejka_iac/1layers_254neurons_16batch_0.000439lr_16horizon_5gru/epoch_354.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
+with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
+	dpm_scaler = pickle.load(f)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels)
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features[:3000], labels[:3000], dpm_scaler)
 dpm_predictions = np.zeros((len(dpm_dataset)-HORIZON, 6, HORIZON+1))
+dpm_ades = np.zeros(len(dpm_dataset))
+dpm_fdes = np.zeros(len(dpm_dataset))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
 idt = 0
 average_displacement_error = 0.0
@@ -130,21 +140,25 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
 	final_displacement_error += np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
+	dpm_ades[idt] = displacement_error / HORIZON
+	dpm_fdes[idt] = np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(dpm_predictions)
 final_displacement_error /= len(dpm_predictions)
 print("DPM (GT) Average Displacement Error:", average_displacement_error)
 print("DPM (GT) Final Displacement Error:", final_displacement_error)
-
+# samples = [np.argmax(dpm_ades[:2200] - ddm_ades[:2200])]
+samples = np.array(range(len(dpm_predictions)-1110, len(dpm_predictions)-100))
+print(samples)
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/plus20/epoch_385.pth"
+state_dict = "../output/deep_pacejka_iac/plus20/epoch_391.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels)
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features[:3000], labels[:3000])
 dpm_plus_predictions = np.zeros((len(dpm_dataset)-HORIZON, 6, HORIZON+1))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
 idt = 0
@@ -178,6 +192,8 @@ for inputs, labels, norm_inputs in tqdm(dpm_data_loader, total=len(dpm_predictio
 		displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	average_displacement_error += displacement_error / HORIZON
 	final_displacement_error += np.sum(np.linalg.norm(dpm_plus_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
+	dpm_ades[idt] = displacement_error / HORIZON
+	dpm_fdes[idt] = np.sum(np.linalg.norm(dpm_predictions[idt,:2,idh+1] - poses[idt+idh+1,:2]))
 	idt += 1
 average_displacement_error /= len(dpm_plus_predictions)
 final_displacement_error /= len(dpm_plus_predictions)
@@ -185,14 +201,14 @@ print("DPM (+20) Average Displacement Error:", average_displacement_error)
 print("DPM (+20) Final Displacement Error:", final_displacement_error)
 
 param_file = "../cfgs/model/deep_pacejka_iac.yaml"
-state_dict = "../output/deep_pacejka_iac/minus20/epoch_183.pth"
+state_dict = "../output/deep_pacejka_iac/minus20/epoch_265.pth"
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
 dpm.cuda()
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
-dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels)
+dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features[:3000], labels[:3000])
 dpm_minus_predictions = np.zeros((len(dpm_dataset)-HORIZON, 6, HORIZON+1))
 dpm_data_loader = torch.utils.data.DataLoader(dpm_dataset, batch_size=1, shuffle=False)
 idt = 0
@@ -238,11 +254,19 @@ font = {'family' : 'normal',
         'weight' : 'normal',
         'size'   : 22}
 matplotlib.rc('font', **font)
+# matplotlib.use('Agg')
+if not os.path.exists("images/"):
+	os.mkdir("images/")
+if not os.path.exists("zoomed_out/"):
+	os.mkdir("zoomed_out/")
+if not os.path.exists("bars/"):
+	os.mkdir("bars/")
+samples = range(100)
 for idx in samples:
 	plt.figure(figsize=(12,8))
 	plt.axis('equal')
-	# plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
-	# plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
 	plt.plot(poses[idx-500:idx+500,0], poses[idx-500:idx+500:,1], 'b', lw=1)
 	plt.plot(poses[idx:idx+HORIZON+1,0], poses[idx:idx+HORIZON+1,1], '--bo', lw=1, label='Ground Truth')
 	plt.xlabel('$x$ [m]')
@@ -252,6 +276,47 @@ for idx in samples:
 	plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co', label="Deep Pacejka (+20)")
 	plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo', label="Deep Pacejka (-20)")
 	plt.legend(loc='upper center', ncol=2, frameon=False)
-	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 10.0, np.max(ddm_predictions[idx,0,:]) + 10.0)
-	plt.ylim(np.min(ddm_predictions[idx,1,:]) - 10.0, np.max(ddm_predictions[idx,1,:]) + 10.0)
-	plt.show()
+	plt.xlim(np.min(ddm_predictions[idx,0,:]) - 5.0, np.max(ddm_predictions[idx,0,:]) + 5.0)
+	plt.ylim(np.min(ddm_predictions[idx,1,:]) - 5.0, np.max(ddm_predictions[idx,1,:]) + 5.0)
+	plt.savefig('images/{:0>4}.png'.format(idx))
+	plt.close()
+	plt.figure(figsize=(12,8))
+	plt.axis('equal')
+	plt.plot(inner_bounds[:,0], inner_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(outer_bounds[:,0], outer_bounds[:,1],'k', lw=0.5, alpha=0.5)
+	plt.plot(poses[idx,0], poses[idx,1], 'bo')
+	plt.savefig('zoomed_out/{:0>4}.png'.format(idx))
+	plt.xlabel('$x$ [m]')
+	plt.ylabel('$y$ [m]')
+	plt.close()
+
+	fig, (ax1,ax2) = plt.subplots(1,2, figsize=(18,8))
+	ax1.set_ylabel('ADE [m]')
+	ax1.set_ylim([0.0, np.max(dpm_ades)])
+	ax1.bar(["DDM", "DPM (GT)"], [np.mean(ddm_ades[idx-9:idx+1]), np.mean(dpm_ades[idx-9:idx+1])], color=['tab:green', 'tab:red'])
+	ax2.set_ylabel('FDE [m]')
+	ax2.set_ylim([0.0, np.max(dpm_fdes)])
+	ax2.bar(["DDM", "DPM (GT)"], [np.mean(ddm_fdes[idx-9:idx+1]), np.mean(dpm_fdes[idx-9:idx+1])], color=['tab:green', 'tab:red'])
+	plt.savefig('bars/{:0>4}.png'.format(idx))
+	plt.close()
+
+
+# Create a scatter plot with sorted data
+fig, ax = plt.subplots(2,2)
+ax[0,0].scatter(poses[:len(ddm_dataset),0], poses[:len(ddm_dataset),1], c=ddm_ades, cmap='hot')
+ade_scatter = ax[0,1].scatter(poses[:len(dpm_dataset),0], poses[:len(dpm_dataset),1], c=dpm_ades, cmap='hot')
+ax[1,0].scatter(poses[:len(ddm_dataset),0], poses[:len(ddm_dataset),1], c=ddm_fdes, cmap='hot')
+fde_scatter = ax[1,1].scatter(poses[:len(dpm_dataset),0], poses[:len(dpm_dataset),1], c=dpm_fdes, cmap='hot')
+ax[0,0].set_ylabel('$y$ [m]')
+ax[1,0].set_ylabel('$y$ [m]')
+ax[1,0].set_xlabel('$x$ [m]')
+ax[1,1].set_xlabel('$x$ [m]')
+ax[0,0].set_title("Deep Dynamics")
+ax[0,1].set_title("Deep Pacejka")
+
+
+# # Add a colorbar
+plt.colorbar(ade_scatter, label='ADE', ax=ax[0,:])
+plt.colorbar(fde_scatter, label='FDE', ax=ax[1,:])
+
+plt.show()

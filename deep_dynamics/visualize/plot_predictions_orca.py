@@ -55,7 +55,7 @@ for i in range(len(poses)): ## Odometry set to 0 when lap is finished
 	if poses[i,0] == 0.0 and poses[i,1] == 0.0:
 		stop_idx = i
 		break
-samples = list(range(50, 300, 50))
+samples = list(range(50, 275, 25))
 driving_inputs = features[:,0,3:5] + features[:,0,5:7]
 ddm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, ddm_scaler)
 ddm_predictions = np.zeros((stop_idx - HORIZON, 6, HORIZON+1))
@@ -269,7 +269,7 @@ plt.figure(figsize=(12,8))
 plt.axis('equal')
 plt.plot(track.x_outer, track.y_outer, 'k', lw=0.5, alpha=0.5)
 plt.plot(track.x_inner, track.y_inner, 'k', lw=0.5, alpha=0.5)
-plt.plot(poses[:300,0], poses[:300,1], 'b', lw=1)
+plt.plot(poses[:260,0], poses[:260,1], 'b', lw=1)
 legend_initialized = False
 for idx in samples:
 	if not legend_initialized:
@@ -278,6 +278,8 @@ for idx in samples:
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro', label="Deep Pacejka (GT)")
 		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co', label="Deep Pacejka (+20%)")
 		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo', label="Deep Pacejka (-20%)")
+		plt.plot(poses[idx,0], poses[idx,1], 'bo')
+		plt.text(poses[idx,0]-0.05, poses[idx,1]+0.05, "%.1f" % float(idx*Ts), color='b', fontsize=18, ha='right', va='top')
 		legend_initialized = True
 	else:
 		plt.plot(poses[idx:idx+HORIZON,0], poses[idx:idx+HORIZON,1], '--bo')
@@ -285,6 +287,8 @@ for idx in samples:
 		plt.plot(dpm_predictions[idx, 0, :], dpm_predictions[idx, 1, :], '--ro')
 		plt.plot(dpm_plus_predictions[idx, 0, :], dpm_plus_predictions[idx, 1, :], '--co')
 		plt.plot(dpm_minus_predictions[idx, 0, :], dpm_minus_predictions[idx, 1, :], '--mo')
+		plt.plot(poses[idx,0], poses[idx,1], 'bo')
+		plt.text(poses[idx,0]-0.05, poses[idx,1]+0.05, "%.1f" % float(idx*Ts), color='b', fontsize=18, ha='right', va='top')
 
 plt.legend(loc='upper center', ncol=3, bbox_to_anchor=(0.5,1.15), frameon=False)
 plt.show()

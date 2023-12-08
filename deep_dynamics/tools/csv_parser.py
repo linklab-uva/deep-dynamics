@@ -25,7 +25,7 @@ def write_dataset(csv_path, horizon, save=True):
                     column_idxs[row[i].split("(")[0]] = i
                 continue
             vx = float(row[column_idxs["vx"]])
-            if abs(vx) < 32:
+            if abs(vx) < 5:
                 if started:
                     break
                 brake = float(row[column_idxs["brake_ped_cmd"]])
