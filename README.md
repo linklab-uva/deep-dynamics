@@ -103,14 +103,16 @@ python3 test_hyperparameters.py {path to cfg}
 You can cite this work using:
 
 ```
-@misc{chrosniak2023deep,
-      title={Deep Dynamics: Vehicle Dynamics Modeling with a Physics-Informed Neural Network for Autonomous Racing}, 
-      author={John Chrosniak and Jingyun Ning and Madhur Behl},
-      year={2023},
-      eprint={2312.04374},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
-}
+@ARTICLE{10499707,
+  author={Chrosniak, John and Ning, Jingyun and Behl, Madhur},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={Deep Dynamics: Vehicle Dynamics Modeling With a Physics-Constrained Neural Network for Autonomous Racing}, 
+  year={2024},
+  volume={9},
+  number={6},
+  pages={5292-5297},
+  keywords={Vehicle dynamics;Mathematical models;Tires;Solid modeling;Predictive models;Physics;Autonomous vehicles;Deep learning methods;model learning for control;dynamics},
+  doi={10.1109/LRA.2024.3388847}}
 ```
 
 You can also read my Master's thesis on this work [here](https://libraetd.lib.virginia.edu/public_view/qr46r2095) :)
