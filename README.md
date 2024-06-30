@@ -1,6 +1,6 @@
 # Deep Dynamics
 
-Deep Dynamics is a physics-informed neural network (PINN) designed to model the complex dynamics observed in a high-speed, competitive racing environment. Using a historical horizon of the vehicle's state and control inputs, Deep Dynamics learns to produce accurate coefficient estimates for a dynamic single-track model that best describes the vehicle's motion. Specifically, this includes Pacejka Magic Formula coefficients for the front and rear wheels, coefficients for a linear drivetrain model, and the vehicle's moment of inertia. The Physics Guard layer ensures that estimated coefficients always lie within their physically-meaningful range, determined by the meaning behind each coefficient.
+Deep Dynamics is a physics-constrained neural network (PCNN) designed to model the complex dynamics observed in a high-speed, competitive racing environment. Using a historical horizon of the vehicle's state and control inputs, Deep Dynamics learns to produce accurate coefficient estimates for a dynamic single-track model that best describes the vehicle's motion. Specifically, this includes Pacejka Magic Formula coefficients for the front and rear wheels, coefficients for a linear drivetrain model, and the vehicle's moment of inertia. The Physics Guard layer ensures that estimated coefficients always lie within their physically-meaningful range, determined by the meaning behind each coefficient.
 
 ## Installation
 
