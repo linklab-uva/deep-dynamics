@@ -35,6 +35,8 @@ outer_bounds = np.array(outer_bounds, dtype=np.float32)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
 else:
     device = torch.device("cpu")
 
@@ -89,7 +91,7 @@ with open(os.path.join(os.path.dirname(state_dict), "scaler.pkl"), "rb") as f:
 with open(param_file, 'rb') as f:
 	param_dict = yaml.load(f, Loader=yaml.SafeLoader)
 dpm = string_to_model[param_dict["MODEL"]["NAME"]](param_dict, eval=True)
-dpm.cuda()
+dpm.to(device)
 dpm.load_state_dict(torch.load(state_dict))
 features, labels, poses = write_dataset(dataset_file, dpm.horizon, save=False)
 dpm_dataset = string_to_dataset[param_dict["MODEL"]["NAME"]](features, labels, dpm_scaler)
